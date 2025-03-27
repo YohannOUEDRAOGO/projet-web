@@ -27,7 +27,6 @@
     </nav>
             <nav>
                 <a href="">Accueil</a>&nbsp; |
-                <a href="">Wish list</a>&nbsp; |
                 Gestion des entreprises&nbsp; |
                 <a href="stage.html">Gestion des offres de stage</a>&nbsp; |
                 <a href="pilote.html">Gestion des pilotes de promotions</a>&nbsp; |

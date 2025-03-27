@@ -75,7 +75,6 @@ $etudiants = $pdo->query("SELECT * FROM etudiants")->fetchAll(PDO::FETCH_ASSOC);
         </nav>
         <nav>
             <a href="">Accueil</a> |
-            <a href="">Wish list</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
             <a href="stage.html">Gestion des offres de stage</a> |
             <a href="">Gestion des pilotes</a> |
