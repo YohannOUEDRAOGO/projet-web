@@ -122,18 +122,77 @@
     </tbody>
 </table>
 
-<fieldset>
-    <legend>
-        <p>Statistique des offres de stage</p>
-    </legend>
+<h2><strong>Répartition par compétences</strong></h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Compétences</th>
+            <th>Offres</th>
+        </tr>
+    </thead>
+    <tbody id="maTable">
+        <tr>
+            <td>Réseau</td>
+            <td>A</td>
+        </tr>
+        <tr>
+            <td>Cybersécurité</td>
+            <td>B</td>
+        </tr>
+        <tr> 
+            <td>Développement web</td>
+            <td>BA</td>
+        </tr>
+    </tbody>
+</table>
 
-    <p>Répartition par compétence</p>
-    
-    <p>Répartition par durée de stage</p>
+<h2><strong>Répartition par durée de stage</strong></h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Durée de stage</th>
+            <th>Offres</th>
+        </tr>
+    </thead>
+    <tbody id="maTable">
+        <tr>
+            <td>2-4 mois</td>
+            <td>A</td>
+        </tr>
+        <tr>
+            <td>5-6 mois-</td>
+            <td>B</td>
+        </tr>
+        <tr> 
+            <td>7-12 mois</td>
+            <td>BA</td>
+        </tr>
+    </tbody>
+</table>
 
-    <p>Top des offres mises en wish list</p>
-
-</fieldset>
+<h2><strong>Top des offres sur la wish list</strong></h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Top des offres</th>
+            <th>Offres</th>
+        </tr>
+    </thead>
+    <tbody id="maTable">
+        <tr>
+            <td>Réseau</td>
+            <td>A</td>
+        </tr>
+        <tr>
+            <td>Cybersécurité</td>
+            <td>B</td>
+        </tr>
+        <tr> 
+            <td>Développement web</td>
+            <td>BA</td>
+        </tr>
+    </tbody>
+</table>
 
 <script>
     let companyCount = 2;
