@@ -4,43 +4,7 @@
     <meta charset="utf-8">
     
     <title>Offres de stage</title>
-    <link rel="stylesheet" href="assets/style.css">
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-        h1, h2 {
-            text-align: center;
-        }
-        form {
-            background: white;  
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0px 0px 5px #aaa;
-            margin-bottom: 20px;
-        }
-        /*tbody tr {
-            display: none;
-        }*/
-    </style>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        .chart-container {
-            width: 50%;
-            margin: auto;
-        }
-        h2 {
-            text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="style/style_entreprises.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -165,7 +129,10 @@
 
     <p>Répartition par compétence</p>
     
-    [Répartition par compétence, par durée de stage, le top des offres mises en wish list
+    <p>Répartition par durée de stage</p>
+
+    <p>Top des offres mises en wish list</p>
+
 </fieldset>
 
 <script>

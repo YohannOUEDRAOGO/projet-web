@@ -5,28 +5,6 @@
     <title>Compte pilote</title>
     <link rel="stylesheet" href="style/style_entreprises.css">
 
-    <style>
-        .rating {
-                display: flex;
-                flex-direction: row-reverse;
-                justify-content: center;
-                margin: 20px 0;
-            }
-            .rating input {
-                display: none;
-            }
-            .rating label {
-                font-size: 40px;
-                color: #ddd;
-                cursor: pointer;
-                transition: color 0.2s;
-            }
-            .rating input:checked ~ label,
-            .rating label:hover,
-            .rating label:hover ~ label {
-                color: gold;
-            }
-    </style>
   </head>
   <body>
     <center><img src="image/logo-lbp-header.png"></center>
