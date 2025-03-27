@@ -29,7 +29,7 @@
     </style>
   </head>
   <body>
-    <center><img src="images/logo-lbp-header.png"></center>
+    <center><img src="image/logo-lbp-header.png"></center>
     <hr>
 
     <center><h1>Bienvenue sur lebonplan </h1></center>
