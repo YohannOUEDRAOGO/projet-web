@@ -43,7 +43,7 @@
         </legend>
         <form action="rechercher_Offre.php" method="post">
             <div>
-                <input type="text" placeholder="Titre, Compétences, Description" id="search" onkeyup="RechercherCompte()" required>
+                <input type="text" placeholder="Email, nom, prénom" id="search" onkeyup="RechercherCompte()" required>
             </div>
             <button type="submit">Rechercher</button>
         </form>
@@ -57,6 +57,10 @@
         </legend>
 
         <form id="formAjouterCompte">
+            <label for="email"><r>Email</r></label>
+            <div>
+                <input type="text" id="email" name="email" required><br><br>
+            </div>
             <label for="nom"><r>Nom</r></label>
             <div>
                 <input type="text" id="nom" name="nom" required><br><br>
@@ -69,45 +73,6 @@
             <button type="submit">Créer</button>
         </form>
     </fieldset>
-    
-
-
-    <h1>Liste des Comptes</h1>
-    <table border="2">
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Prénom</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="maTable">
-            <tr>
-                <td>Dupont</td>
-                <td>Jean</td>
-                <td>
-                    <button onclick="modifierCompte(this)">Modifier</button>
-                    <button onclick="supprimerCompte(this)">Supprimer</button>
-                </td>
-            </tr>
-            <tr>
-                <td>Durand</td>
-                <td>Marie</td>
-                <td>
-                    <button onclick="modifierCompte(this)">Modifier</button>
-                    <button onclick="supprimerCompte(this)">Supprimer</button>
-                </td>
-            </tr>
-            <tr>
-                <td>Martin</td>
-                <td>Paul</td>
-                <td>
-                    <button onclick="modifierCompte(this)">Modifier</button>
-                    <button onclick="supprimerCompte(this)">Supprimer</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
 
 <script>
     let companyCount = 2;
@@ -115,22 +80,24 @@
     document.getElementById("formAjouterCompte").addEventListener("submit", function(event) {
         event.preventDefault(); 
 
+        let email = document.getElementById("email").value;
         let nom = document.getElementById("nom").value;
         let prenom = document.getElementById("prenom").value;
 
-        if (nom && prenom) {
+        if (email && nom && prenom) {
             let table = document.getElementById("maTable");
             let newRow = table.insertRow();
             let ratingGroup = "rating_" + companyCount;
 
-            newRow.innerHTML = `
+            newRow.innerHTML =
+                <td>${email}</td>
                 <td>${nom}</td>
                 <td>${prenom}</td>
                 <td>
                     <button onclick="modifierCompte(this)">Modifier</button>
                     <button onclick="supprimerCompte(this)">Supprimer</button>
                 </td>
-            `;
+            ;
             companyCount++;
             document.getElementById("formAjouterCompte").reset();
         }
@@ -147,12 +114,14 @@
         let row = button.parentNode.parentNode;
         let cells = row.getElementsByTagName("td");
 
-        let nom = prompt("Modifier le nom:", cells[0].innerText);
-        let prenom = prompt("Modifier le prénom:", cells[1].innerText);
+        let email = prompt("Modifier l'email':", cells[0].innerText);
+        let nom = prompt("Modifier le nom:", cells[1].innerText);
+        let prenom = prompt("Modifier le prénom:", cells[2].innerText);
 
-        if (nom && prenom) {
-            cells[0].innerText = nom;
-            cells[1].innerText = prenom;
+        if (email && nom && prenom) {
+            cells[0].innerText = email;
+            cells[1].innerText = nom;
+            cells[2].innerText = prenom;
         }
     }
 
@@ -168,8 +137,8 @@
 
             for (let cell of cells) {
                 if (cell && cell.innerText.toLowerCase().includes(input)) {
-                        match = true;
-                        break;
+                    match = true;
+                    break;
                 }
             }
             row.style.display = match || input === "" ? "" : "none";
