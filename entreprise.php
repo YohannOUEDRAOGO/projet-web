@@ -1,202 +1,211 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>Gestion des Entreprises</title>
-        <link href="style/style_entreprises.css" rel="stylesheet">
-    </head>
-    <body>
-        <header>
-            <nav class="navbar">
-            <center>
-                    <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
-            </center>
-        <div class="user-menu" id="userMenu">
-            <div class="user-info" onclick="toggleMenu()">
-                <div class="user-avatar">YR</div>
-                <span class="user-name">Yohann Romarick</span>
-                <span class="dropdown-icon">▼</span>
-            </div>
-            <div class="dropdown-menu" id="dropdownMenu">
-                <a href="#" class="dropdown-item">Mon profil</a>
-                <a href="#" class="dropdown-item">Wish-list</a>
-                <div class="divider"></div>
-                <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
-            </div>
-        </div>
-    </nav>
-            <nav>
-                <a href="">Accueil</a>&nbsp; |
-                Gestion des entreprises&nbsp; |
-                <a href="stage.html">Gestion des offres de stage</a>&nbsp; |
-                <a href="pilote.html">Gestion des pilotes de promotions</a>&nbsp; |
-                <a href="etudiant.php">Gestion des étudiants</a>&nbsp; |
-                <a href="">Gestion des candidatures</a>&nbsp; |
-            </nav>
+<?php
+$servername = "localhost";
+$username = "root";
+$password = ""; 
+$dbname = "projet-web";
 
-        </header>
-        <main>
-            <section>
-                <article>
-                    <h2>Rechercher une entreprise</h2>
-                    <input type="text" placeholder="Nom de l'entreprise, Compétences, Description" size="40" id="search" onkeyup="searchCompany()" required>
-                    
-                    <h2>Créer une entreprise</h2>
-                    <form action="Ajouter une entreprise" id="addCompanyForm">
-                        <label for="Nom">Nom de l'entreprise
-                            <input type="text" name="Nom" id="name" required>
-                        </label>
-                        
-                        <label for="Description de l'entreprise">Description de l'entreprise
-                            <input type="text" name="Description" id="description" required>
-                        </label>
-                        <label for="Lien vers l'entreprise">URL de l'entreprise
-                            <input type="text" name="url" id="url" required>
-                        </label>
-                        
-                        <label for="Email">Email
-                            <input type="email" name="email" id="email" required>
-                        </label>
-                        
-                        <label for="téléphone de contact">Téléphone
-                            <input type="number" name="telephone" id="phone" required>
-                        </label>
-                        
+try {
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Erreur de connexion : " . $e->getMessage());
+}
 
-                        
-                        <button type="submit">Créer</button>
-                    </form>
-                    <br>
-                    
-                    <h2>Listes des entreprises</h2>
-                    <table border="1">
-                        <thead>
-                            <tr>
-                                <th>Nom de l'entreprise</th>
-                                <th>Description</th>
-                                <th>Email</th>
-                                <th>Téléphone</th>
-                                <th>Nombre de candidatures</th>
-                                <th>Actions</th>
-                                <th>Evaluation</th>
-                            </tr>
-                        </thead>
-                        <tbody id="companyTable">
-                        </tbody>
-                    </table>
-                </article>
-                <script>
-                    let companyCount = 2;
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    $nom = htmlspecialchars($_POST['nom']);
+    $description = htmlspecialchars($_POST['description']);
+    $url = filter_var($_POST['url'], FILTER_SANITIZE_URL);
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    $telephone = htmlspecialchars($_POST['telephone']);
 
-                    document.getElementById("addCompanyForm").addEventListener("submit", function(event) {
-                        event.preventDefault(); 
-
-                        let name = document.getElementById("name").value;
-                        let description = document.getElementById("description").value;
-                        let email = document.getElementById("email").value;
-                        let phone = document.getElementById("phone").value;
-                        let url = document.getElementById("url").value;
-
-                        if (name && description && email && phone) {
-                            let table = document.getElementById("companyTable");
-                            let newRow = table.insertRow();
-                            let ratingGroup = "rating_" + companyCount;
-
-                            newRow.innerHTML = `
-                                <td><a href="${url}" target="_blank">${name}</a></td>
-                                <td>${description}</td>
-                                <td>${email}</td>
-                                <td>${phone}</td>
-                                <td>0</td>
-                                <td>
-                                    <button class="edit-btn" onclick="editCompany(this)">Modifier</button>
-                                    <button class="delete-btn" onclick="deleteCompany(this)">Supprimer</button>
-                                </td>
-                                <td>
-                                    <div class="rating">
-                                        <input type="radio" id="star5_${companyCount}" name="${ratingGroup}" value="5" />
-                                        <label for="star5_${companyCount}" title="5 étoiles">&#9733;</label>
-                                        
-                                        <input type="radio" id="star4_${companyCount}" name="${ratingGroup}" value="4" />
-                                        <label for="star4_${companyCount}" title="4 étoiles">&#9733;</label>
-                                        
-                                        <input type="radio" id="star3_${companyCount}" name="${ratingGroup}" value="3" />
-                                        <label for="star3_${companyCount}" title="3 étoiles">&#9733;</label>
-                                        
-                                        <input type="radio" id="star2_${companyCount}" name="${ratingGroup}" value="2" />
-                                        <label for="star2_${companyCount}" title="2 étoiles">&#9733;</label>
-                                        
-                                        <input type="radio" id="star1_${companyCount}" name="${ratingGroup}" value="1" />
-                                        <label for="star1_${companyCount}" title="1 étoile">&#9733;</label>
-                                    </div>
-                                </td>
-                            `;
-                            companyCount++;
-                            document.getElementById("addCompanyForm").reset();
-                        }
-                    });
-
-                    function deleteCompany(button) {
-                        if (confirm("Voulez-vous vraiment supprimer cette entreprise ?")) {
-                            let row = button.parentNode.parentNode;
-                            row.parentNode.removeChild(row);
-                        }
-                    }
-
-                    function editCompany(button) {
-                        let row = button.parentNode.parentNode;
-                        let cells = row.getElementsByTagName("td");
-
-                        let name = prompt("Modifier le nom:", cells[0].innerText);
-                        let description = prompt("Modifier la description:", cells[1].innerText);
-                        let email = prompt("Modifier l'email:", cells[2].innerText);
-                        let phone = prompt("Modifier le téléphone:", cells[3].innerText);
-
-                        if (name && description && email && phone) {
-                            cells[0].innerText = name;
-                            cells[1].innerText = description;
-                            cells[2].innerText = email;
-                            cells[3].innerText = phone;
-                        }
-                        
-                    }
-                    function toggleMenu() {
-                    document.getElementById('dropdownMenu').classList.toggle('show');
-                    }
-                    window.onclick = function(event) {
-                    if (!event.target.matches('.user-info') && !event.target.closest('.user-info')) {
-                    const dropdown = document.getElementById('dropdownMenu');
-                   if (dropdown.classList.contains('show')) {
-                   dropdown.classList.remove('show');
+    if (!empty($nom) && !empty($description) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!empty($_POST['id'])) {
+            // Mise à jour
+            $stmt = $pdo->prepare("UPDATE entreprises SET nom=?, description=?, url=?, email=?, telephone=? WHERE id=?");
+            $stmt->execute([$nom, $description, $url, $email, $telephone, $_POST['id']]);
+        } else {
+            // Ajout
+            $stmt = $pdo->prepare("INSERT INTO entreprises (nom, description, url, email, telephone) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$nom, $description, $url, $email, $telephone]);
         }
+        header("Location: ".$_SERVER['PHP_SELF']);
+        exit;
     }
 }
 
-document.getElementById('logoutBtn').addEventListener('click', function(e) {
-    e.preventDefault();
-    // Ajoutez ici votre logique de déconnexion
-    alert('Déconnexion effectuée');
+// Suppression
+if (isset($_GET['delete'])) {
+    $stmt = $pdo->prepare("DELETE FROM entreprises WHERE id=?");
+    $stmt->execute([$_GET['delete']]);
+    header("Location: ".$_SERVER['PHP_SELF']);
+    exit;
+}
 
-});
-                    function searchCompany() {
-                        let input = document.getElementById("search").value.toLowerCase();
-                        let rows = document.getElementById("companyTable").getElementsByTagName("tr");
-                        for (let row of rows) {
-                            if (row.querySelector('th')) continue;
-                             let cells = row.getElementsByTagName("td");
-                             let matchFound = false;
-                             for (let cell of cells) {
-                                  if (cell.innerText.toLowerCase().includes(input)) {
-                                    matchFound = true;
-                                    break;
+// Récupération
+$entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Gestion des Entreprises</title>
+    <link href="style/style_entreprises.css" rel="stylesheet">
+    <style>
+        .rating { unicode-bidi: bidi-override; direction: rtl; }
+        .rating > input { display: none; }
+        .rating > label { display: inline-block; cursor: pointer; }
+        .rating > label:hover,
+        .rating > label:hover ~ label,
+        .rating > input:checked ~ label { color: gold; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <center>
+                <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
+            </center>
+            <div class="user-menu" id="userMenu">
+                <div class="user-info" onclick="toggleMenu()">
+                    <div class="user-avatar">YR</div>
+                    <span class="user-name">Yohann Romarick</span>
+                    <span class="dropdown-icon">▼</span>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" class="dropdown-item">Mon profil</a>
+                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <div class="divider"></div>
+                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                </div>
+            </div>
+        </nav>
+        <nav>
+            <a href="">Accueil</a> |
+            <strong>Gestion des entreprises</strong>|
+            <a href="stage.html">Gestion des offres de stage</a> |
+            <a href="pilote.html">Gestion des pilotes</a> |
+            <a href="etudiant.php">Gestion des étudiants</a> |
+            <a href="">Gestion des candidatures</a>
+        </nav>
+    </header>
+
+    <main>
+        <section>
+            <article>
+                <h2>Rechercher une entreprise</h2>
+                <input type="text" placeholder="Nom, Description ou Email" id="search" onkeyup="searchCompany()" required>
+                
+                <h2>Ajouter/Modifier une entreprise</h2>
+                <form method="POST" id="companyForm">
+                    <input type="hidden" id="editId" name="id">
+                    
+                    <label for="nom">Nom
+                        <input type="text" name="nom" id="nom" required>
+                    </label>
+                    
+                    <label for="description">Description
+                        <input type="text" name="description" id="description" required>
+                    </label>
+                    
+                    <label for="url">URL
+                        <input type="url" name="url" id="url">
+                    </label>
+                    
+                    <label for="email">Email
+                        <input type="email" name="email" id="email" required>
+                    </label>
+                    
+                    <label for="telephone">Téléphone
+                        <input type="text" name="telephone" id="telephone" required>
+                    </label>
+                    
+                    <button type="submit" name="ajouter">Enregistrer</button>
+                </form>
+                
+                <h2>Liste des entreprises</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Description</th>
+                            <th>Email</th>
+                            <th>Téléphone</th>
+                            <th>Actions</th>
+                            <th>Évaluation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="companyTable">
+                        <?php foreach ($entreprises as $entreprise): ?>
+                        <tr>
+                            <td><a href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
+                            <td><?= htmlspecialchars($entreprise['description']) ?></td>
+                            <td><?= htmlspecialchars($entreprise['email']) ?></td>
+                            <td><?= htmlspecialchars($entreprise['telephone']) ?></td>
+                            <td>
+                                <button class="edit-btn" onclick="editCompany(
+                                    '<?= $entreprise['id'] ?>',
+                                    '<?= addslashes($entreprise['nom']) ?>',
+                                    '<?= addslashes($entreprise['description']) ?>',
+                                    '<?= addslashes($entreprise['url']) ?>',
+                                    '<?= addslashes($entreprise['email']) ?>',
+                                    '<?= addslashes($entreprise['telephone']) ?>'
+                                )">Modifier</button>
+                                <a href="?delete=<?= $entreprise['id'] ?>" onclick="return confirm('Supprimer cette entreprise?')" class="delete-btn">Supprimer</a>
+                            </td>
+                            <td>
+                                <div class="rating">
+                                    <?php for ($i = 5; $i >= 1; $i--): ?>
+                                    <input type="radio" id="star<?= $i ?>_<?= $entreprise['id'] ?>" name="rating_<?= $entreprise['id'] ?>" value="<?= $i ?>" <?= ($i == 3) ? 'checked' : '' ?>>
+                                    <label for="star<?= $i ?>_<?= $entreprise['id'] ?>" title="<?= $i ?> étoiles">★</label>
+                                    <?php endfor; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </article>
+        </section>
+    </main>
+
+    <footer></footer>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        window.onclick = function(e) {
+            if (!e.target.matches('.user-info *')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
             }
         }
-        row.style.display = matchFound ? "" : "none";
-    }
-}
-                </script>
-            </section>
-        </main>
-        <footer></footer>
-    </body>
+
+        function editCompany(id, nom, description, url, email, telephone) {
+            document.getElementById('editId').value = id;
+            document.getElementById('nom').value = nom;
+            document.getElementById('description').value = description;
+            document.getElementById('url').value = url;
+            document.getElementById('email').value = email;
+            document.getElementById('telephone').value = telephone;
+            window.scrollTo(0, 0);
+        }
+
+        function searchCompany() {
+            const filter = document.getElementById('search').value.toLowerCase();
+            document.querySelectorAll('#companyTable tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Déconnexion ?')) {
+                window.location.href = 'authentification.php';
+            }
+        });
+    </script>
+</body>
 </html>

@@ -2,7 +2,8 @@
 $servername = "localhost";
 $username = "root";
 $password = ""; 
-$dbname = "gestion_entreprises"; 
+$dbname = "projet-web"; // Nom de la base de données
+
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -78,7 +79,7 @@ $etudiants = $pdo->query("SELECT * FROM etudiants")->fetchAll(PDO::FETCH_ASSOC);
             <a href="entreprise.php">Gestion des entreprises</a> |
             <a href="stage.html">Gestion des offres de stage</a> |
             <a href="">Gestion des pilotes</a> |
-            Gestion des étudiants|
+            <strong>Gestion des étudiants</strong>|
             <a href="">Gestion des candidatures</a>
         </nav>
     </header>
@@ -173,7 +174,7 @@ $etudiants = $pdo->query("SELECT * FROM etudiants")->fetchAll(PDO::FETCH_ASSOC);
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
-                window.location.href = 'logout.php';
+                window.location.href = 'authentification.php';
             }
         });
     </script>
