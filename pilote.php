@@ -21,7 +21,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
             $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $_POST['id']]);
         } else {
-            // Ajout
+            // Ajout.
             $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom) VALUES (?, ?)");
             $stmt->execute([$nom, $prenom]);
         }
