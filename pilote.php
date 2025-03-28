@@ -3,11 +3,33 @@
   <head>
     <meta charset="utf-8">
     <title>Compte pilote</title>
-    <link rel="stylesheet" href="style/style_entreprises.css">
+    <link rel="stylesheet" href="assets/style.css">
 
+    <style>
+        .rating {
+                display: flex;
+                flex-direction: row-reverse;
+                justify-content: center;
+                margin: 20px 0;
+            }
+            .rating input {
+                display: none;
+            }
+            .rating label {
+                font-size: 40px;
+                color: #ddd;
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+            .rating input:checked ~ label,
+            .rating label:hover,
+            .rating label:hover ~ label {
+                color: gold;
+            }
+    </style>
   </head>
   <body>
-    <center><img src="image/logo-lbp-header.png"></center>
+    <center><img src="images/logo-lbp-header.png"></center>
     <hr>
 
     <center><h1>Bienvenue sur lebonplan </h1></center>
@@ -21,7 +43,7 @@
         </legend>
         <form action="rechercher_Offre.php" method="post">
             <div>
-                <input type="text" placeholder="Email, nom, prenom" id="search" onkeyup="RechercherCompte()" required>
+                <input type="text" placeholder="Titre, Compétences, Description" id="search" onkeyup="RechercherCompte()" required>
             </div>
             <button type="submit">Rechercher</button>
         </form>
@@ -35,10 +57,6 @@
         </legend>
 
         <form id="formAjouterCompte">
-            <label for="email"><r>Email</r></label>
-            <div>
-                <input type="text" id="email" name="email" required><br><br>
-            </div>
             <label for="nom"><r>Nom</r></label>
             <div>
                 <input type="text" id="nom" name="nom" required><br><br>
@@ -53,23 +71,59 @@
     </fieldset>
     
 
+
+    <h1>Liste des Comptes</h1>
+    <table border="2">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="maTable">
+            <tr>
+                <td>Dupont</td>
+                <td>Jean</td>
+                <td>
+                    <button onclick="modifierCompte(this)">Modifier</button>
+                    <button onclick="supprimerCompte(this)">Supprimer</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Durand</td>
+                <td>Marie</td>
+                <td>
+                    <button onclick="modifierCompte(this)">Modifier</button>
+                    <button onclick="supprimerCompte(this)">Supprimer</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Martin</td>
+                <td>Paul</td>
+                <td>
+                    <button onclick="modifierCompte(this)">Modifier</button>
+                    <button onclick="supprimerCompte(this)">Supprimer</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
 <script>
     let companyCount = 2;
 
     document.getElementById("formAjouterCompte").addEventListener("submit", function(event) {
         event.preventDefault(); 
 
-        let email = document.getElementById("email").value;
         let nom = document.getElementById("nom").value;
         let prenom = document.getElementById("prenom").value;
 
-        if (email && nom && prenom) {
+        if (nom && prenom) {
             let table = document.getElementById("maTable");
             let newRow = table.insertRow();
             let ratingGroup = "rating_" + companyCount;
 
-            newRow.innerHTML = 
-                <td>${email}</td>`
+            newRow.innerHTML = `
                 <td>${nom}</td>
                 <td>${prenom}</td>
                 <td>
@@ -93,14 +147,12 @@
         let row = button.parentNode.parentNode;
         let cells = row.getElementsByTagName("td");
 
-        let email = prompt("Modifier l'Email':", cells[0].innerText);
-        let nom = prompt("Modifier le nom:", cells[1].innerText);
-        let prenom = prompt("Modifier le prénom:", cells[2].innerText);
+        let nom = prompt("Modifier le nom:", cells[0].innerText);
+        let prenom = prompt("Modifier le prénom:", cells[1].innerText);
 
-        if (email && nom && prenom) {
-            cells[0].innerText = email;
-            cells[1].innerText = nom;
-            cells[2].innerText = prenom;
+        if (nom && prenom) {
+            cells[0].innerText = nom;
+            cells[1].innerText = prenom;
         }
     }
 
