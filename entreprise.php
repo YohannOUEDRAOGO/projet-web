@@ -203,7 +203,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
-                window.location.href = 'logout.php';
+                window.location.href = 'authentification.php';
             }
         });
     </script>

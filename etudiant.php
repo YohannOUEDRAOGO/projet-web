@@ -4,6 +4,7 @@ $username = "root";
 $password = ""; 
 $dbname = "projet-web"; // Nom de la base de données
 
+
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -173,7 +174,7 @@ $etudiants = $pdo->query("SELECT * FROM etudiants")->fetchAll(PDO::FETCH_ASSOC);
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
-                window.location.href = 'logout.php';
+                window.location.href = 'authentification.php';
             }
         });
     </script>
