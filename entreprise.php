@@ -84,7 +84,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
             <a href="">Accueil</a> |
             <strong>Gestion des entreprises</strong>|
             <a href="stage.html">Gestion des offres de stage</a> |
-            <a href="pilote.html">Gestion des pilotes</a> |
+            <a href="pilote.php">Gestion des pilotes</a> |
             <a href="etudiant.php">Gestion des étudiants</a> |
             <a href="">Gestion des candidatures</a>
         </nav>
