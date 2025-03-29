@@ -1,4 +1,12 @@
 <?php
+session_start(); // Ajoutez cette ligne au tout début
+
+// Vérification de la connexion
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
 $servername = "localhost";
 $username = "root";
 $password = ""; 
@@ -10,6 +18,9 @@ try {
 } catch (PDOException $e) {
     die("Erreur de connexion : " . $e->getMessage());
 }
+
+// Récupération des informations de l'utilisateur connecté
+$currentUser = $_SESSION['user'];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $nom = htmlspecialchars($_POST['nom']);
@@ -67,18 +78,26 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                 <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
             </center>
             <div class="user-menu" id="userMenu">
-                <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
-                    <span class="dropdown-icon">▼</span>
-                </div>
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
-                    <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
-                </div>
-            </div>
+    <div class="user-info" onclick="toggleMenu()">
+        <div class="user-avatar">
+            <?php 
+                echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
+            ?>
+        </div>
+        <span class="user-name">
+            <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+        </span>
+        <span class="dropdown-icon">▼</span>
+    </div>
+    <div class="dropdown-menu" id="dropdownMenu">
+        <a href="profil.php" class="dropdown-item">Mon profil</a>
+        <?php if ($currentUser['role'] === 'etudiant'): ?>
+            <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+        <?php endif; ?>
+        <div class="divider"></div>
+        <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+    </div>
+</div>
         </nav>
         <nav>
             <a href="">Accueil</a> |
