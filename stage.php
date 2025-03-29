@@ -113,7 +113,7 @@ $offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
                         <input type="text" name="nbetudiants" id="nbetudiants" required>
                     </label>
                     <label for="dateoffre">Date de l'offre
-                        <input type="text" name="dateoffre" id="dateoffre" required>
+                        <input type="date" name="dateoffre" id="dateoffre" required>
                     </label>
                     
                     <button type="submit" name="ajouter">Enregistrer</button>
