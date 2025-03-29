@@ -20,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $nbetudiants= htmlspecialchars($_POST['nbetudiants']);
     $dateoffre= htmlspecialchars($_POST['dateoffre']);
 
-    if (!empty($titre) && !empty($description) && !empty($competences) && !empty($entreprise) && !empty($baserenumerationl) && !empty($nbetudiants) && !empty($dateoffre)) {
+    if (!empty($titre) && !empty($descriptions) && !empty($competences) && !empty($entreprise) && !empty($baserenumerationl) && !empty($nbetudiants) && !empty($dateoffre)) {
         if (!empty($_POST['id'])) {
             // Mise à jour
             $stmt = $pdo->prepare("UPDATE offresstages SET titre=?, descriptions=?, competences=?, entreprise=?, baserenumeration=?, nbetudiants=?, dateoffre=? WHERE id=?");
