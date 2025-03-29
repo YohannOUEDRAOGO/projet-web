@@ -1,8 +1,56 @@
 <?php
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require 'vendor/autoload.php';
+
 $servername = "localhost";
 $username = "root";
 $password = ""; 
 $dbname = "gestion"; // Nom de la base de données
+
+
+function genererMotDePasseUnique($pdo) {
+    $majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $minuscules = 'abcdefghijklmnopqrstuvwxyz';
+    $chiffres = '0123456789';
+    $speciaux = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    $tentatives = 0;
+    $maxTentatives = 100; // Sécurité pour éviter les boucles infinies
+    
+    do {
+        $motDePasse = '';
+        
+        // Construction du mot de passe selon les critères
+        $motDePasse .= $majuscules[rand(0, strlen($majuscules) - 1)];
+        $motDePasse .= $minuscules[rand(0, strlen($minuscules) - 1)];
+        $motDePasse .= $chiffres[rand(0, strlen($chiffres) - 1)];
+        $motDePasse .= $speciaux[rand(0, strlen($speciaux) - 1)];
+        
+        // Compléter à 12 caractères
+        $tousCaracteres = $majuscules . $minuscules . $chiffres . $speciaux;
+        while (strlen($motDePasse) < 12) {
+            $motDePasse .= $tousCaracteres[rand(0, strlen($tousCaracteres) - 1)];
+        }
+        
+        $motDePasse = str_shuffle($motDePasse);
+        $motDePasseHash = password_hash($motDePasse, PASSWORD_BCRYPT);
+        
+        // Vérifier si le hash existe déjà
+        $stmt = $pdo->prepare("SELECT id FROM etudiants WHERE mot_de_passe = ?");
+        $stmt->execute([$motDePasseHash]);
+        $existe = $stmt->rowCount() > 0;
+        
+        $tentatives++;
+        if ($tentatives >= $maxTentatives) {
+            throw new Exception("Impossible de générer un mot de passe unique après $maxTentatives tentatives");
+        }
+    } while ($existe);
+    
+    return ['plain' => $motDePasse, 'hash' => $motDePasseHash];
+}
+
 
 
 try {
@@ -19,16 +67,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
 
     if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (!empty($_POST['id'])) {
-            // Mise à jour
+            // Mise à jour (sans changer le mot de passe)
             $stmt = $pdo->prepare("UPDATE etudiants SET nom=?, prenom=?, email=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
-            // Ajout
-            $stmt = $pdo->prepare("INSERT INTO etudiants (nom, prenom, email) VALUES (?, ?, ?)");
-            $stmt->execute([$nom, $prenom, $email]);
+            // Vérifier si l'email existe déjà
+            $check = $pdo->prepare("SELECT id FROM etudiants WHERE email = ?");
+            $check->execute([$email]);
             
-            // Envoi d'email (à adapter)
-            mail($email, "Inscription", "Votre compte a été créé", "From: no-reply@lebonplan.com");
+            if ($check->rowCount() > 0) {
+                echo "<script>alert('Cet email est déjà utilisé par un autre étudiant');</script>";
+            } else {
+                try {
+                    // Génération d'un mot de passe unique
+                    $passwordData = genererMotDePasseUnique($pdo);
+                    
+                    // Ajout dans la base de données
+                    $stmt = $pdo->prepare("INSERT INTO etudiants (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$nom, $prenom, $email, $passwordData['hash']]);
+                    
+                    // Envoi d'email avec PHPMailer
+                    $mail = new PHPMailer(true);
+                    try {
+                        $mail->isSMTP();
+                        $mail->Host = 'smtp.gmail.com';
+                        $mail->SMTPAuth = true;
+                        $mail->Username = 'cryptosteph17@gmail.com';
+                        $mail->Password = 'zgybnrnzconvsjvd';
+                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port = 587;
+                
+                        $mail->setFrom('no-reply@lebonplan.com', 'Le Bon Plan');
+                        $mail->addAddress($email);
+                        $mail->Subject = 'Inscription';
+                        $mail->Body = "Bonjour $prenom $nom,\n\nVotre inscription a bien été enregistrée.\nIdentifiants:\nEmail: $email\nMot de Passe: {$passwordData['plain']}\n\nCordialement,\nL'équipe pédagogique.";
+                
+                        $mail->send();
+                    } catch (Exception $e) {
+                        error_log("Erreur d'envoi d'email: " . $e->getMessage());
+                    }
+                } catch (Exception $e) {
+                    die("Erreur: " . $e->getMessage());
+                }
+            }
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
