@@ -109,7 +109,7 @@ $offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
                     <label for="baserenumeration">Base de rénumération
                         <input type="text" name="baserenumeration" id="baserenumeration" required>
                     </label>
-                    <label for="nbetudiants">Email
+                    <label for="nbetudiants">Nombre d'étudiants ayant postulé
                         <input type="text" name="nbetudiants" id="nbetudiants" required>
                     </label>
                     <label for="dateoffre">Date de l'offre
