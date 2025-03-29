@@ -12,8 +12,8 @@ try {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
-    $description= htmlspecialchars($_POST['titre']);
-    $description= htmlspecialchars($_POST['descriptions']);
+    $titre= htmlspecialchars($_POST['titre']);
+    $descriptions= htmlspecialchars($_POST['descriptions']);
     $competences = htmlspecialchars($_POST['competences']);
     $entreprise = htmlspecialchars($_POST['entreprise']);
     $baserenumeration= htmlspecialchars($_POST['baserenumeration']);
