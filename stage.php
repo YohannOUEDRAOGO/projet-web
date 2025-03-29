@@ -80,45 +80,7 @@
         </tr>
     </thead>
     <tbody id="maTable">
-        <tr>
-            <td>Stage en réseau</td>
-            <td>A</td>
-            <td>Bac+2, Adressage IP, réseau, config serveur</td>
-            <td>Groupe Stéphane</td>
-            <td>1/2 SMIC</td>
-            <td>30</td>
-            <td>12-03-2025</td>
-            <td>
-                <button onclick="modifieroffre(this)">Modifier</button>
-                <button onclick="supprimeroffre(this)">Supprimer</button>
-            </td>
-        </tr>
-        <tr>
-            <td>Stage en dev web</td>
-            <td>B</td>
-            <td>Bac+2, HTML, CSS, Javascript</td>
-            <td>Groupe Cinthia</td>
-            <td>1/2 SMIC</td>
-            <td>30</td>
-            <td>12-03-2025</td>
-            <td>
-                <button onclick="modifieroffre(this)">Modifier</button>
-                <button onclick="supprimeroffre(this)">Supprimer</button>
-            </td>
-        </tr>
-        <tr> 
-            <td>Stage en réseau2</td>
-            <td>BA</td>
-            <td>Bac+2, IPv4, IPv6</td>
-            <td>Groupe Samy</td>
-            <td>1/2 SMIC</td>
-            <td>30</td>
-            <td>12-03-2025</td>
-            <td>
-                <button onclick="modifieroffre(this)">Modifier</button>
-                <button onclick="supprimeroffre(this)">Supprimer</button>
-            </td>
-        </tr>
+        
     </tbody>
 </table>
 
@@ -130,7 +92,7 @@
             <th>Offres</th>
         </tr>
     </thead>
-    <tbody id="maTable">
+    <tbody id="compTable">
         <tr>
             <td>Réseau</td>
             <td>A</td>
@@ -154,19 +116,8 @@
             <th>Offres</th>
         </tr>
     </thead>
-    <tbody id="maTable">
-        <tr>
-            <td>2-4 mois</td>
-            <td>A</td>
-        </tr>
-        <tr>
-            <td>5-6 mois-</td>
-            <td>B</td>
-        </tr>
-        <tr> 
-            <td>7-12 mois</td>
-            <td>BA</td>
-        </tr>
+    <tbody id="DureeTable">
+
     </tbody>
 </table>
 
@@ -178,19 +129,8 @@
             <th>Offres</th>
         </tr>
     </thead>
-    <tbody id="maTable">
-        <tr>
-            <td>Réseau</td>
-            <td>A</td>
-        </tr>
-        <tr>
-            <td>Cybersécurité</td>
-            <td>B</td>
-        </tr>
-        <tr> 
-            <td>Développement web</td>
-            <td>BA</td>
-        </tr>
+    <tbody id="wishTable">
+
     </tbody>
 </table>
 
