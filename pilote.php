@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = ""; 
-$dbname = "projet-web"; // Nom de la base de données
+$dbname = "gestion"; 
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -12,18 +12,19 @@ try {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    $email= htmlspecialchars($_POST['email']);
     $nom = htmlspecialchars($_POST['nom']);
     $prenom = htmlspecialchars($_POST['prenom']);
 
-    if (!empty($nom) && !empty($prenom)) {
+    if (!empty($email) && !empty($nom) && !empty($prenom)) {
         if (!empty($_POST['id'])) {
             // Mise à jour
-            $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=? WHERE id=?");
-            $stmt->execute([$nom, $prenom, $_POST['id']]);
+            $stmt = $pdo->prepare("UPDATE pilotes SET email=?, nom=?, prenom=? WHERE id=?");
+            $stmt->execute([$email, $nom, $prenom, $_POST['id']]);
         } else {
-            // Ajout.
-            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom) VALUES (?, ?)");
-            $stmt->execute([$nom, $prenom]);
+            // Ajout
+            $stmt = $pdo->prepare("INSERT INTO pilotes (email, nom, prenom) VALUES (?, ?)");
+            $stmt->execute([$email, $nom, $prenom]);
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
@@ -83,12 +84,15 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
         <section>
             <article>
                 <h2>Rechercher un pilote</h2>
-                <input type="text" placeholder="Nom ou Prénom" id="search" onkeyup="searchPilote()" required>
+                <input type="text" placeholder="Email, nom ou Prénom" id="search" onkeyup="searchPilote()" required>
                 
                 <h2>Ajouter/Modifier un pilote</h2>
                 <form method="POST" id="piloteForm">
                     <input type="hidden" id="editId" name="id">
                     
+                    <label for="email">Email
+                        <input type="text" name="email" id="email" required>
+                    </label>
                     <label for="nom">Nom
                         <input type="text" name="nom" id="nom" required>
                     </label>
@@ -104,6 +108,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                 <table>
                     <thead>
                         <tr>
+                            <th>Email</th>
                             <th>Nom</th>
                             <th>Prénom</th>
                             <th>Actions</th>
@@ -112,11 +117,13 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                     <tbody id="piloteTable">
                         <?php foreach ($pilotes as $pilote): ?>
                         <tr>
+                            <td><?= htmlspecialchars($pilote['email']) ?></td>
                             <td><?= htmlspecialchars($pilote['nom']) ?></td>
                             <td><?= htmlspecialchars($pilote['prenom']) ?></td>
                             <td>
                                 <button class="edit-btn" onclick="editPilote(
                                     '<?= $pilote['id'] ?>',
+                                    '<?= addslashes($pilote['email']) ?>',
                                     '<?= addslashes($pilote['nom']) ?>',
                                     '<?= addslashes($pilote['prenom']) ?>'
                                 )">Modifier</button>
@@ -146,8 +153,9 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        function editPilote(id, nom, prenom) {
+        function editPilote(id, email, nom, prenom) {
             document.getElementById('editId').value = id;
+            document.getElementById('email').value = email;
             document.getElementById('nom').value = nom;
             document.getElementById('prenom').value = prenom;
             window.scrollTo(0, 0);
