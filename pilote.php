@@ -3,6 +3,7 @@ $servername = "localhost";
 $username = "root";
 $password = ""; 
 $dbname = "projet-web";
+$dbname = "projet-web";
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -73,8 +74,8 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
         <nav>
             <a href="">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.php">Gestion des offres de stage</a> |
-            <strong>Gestion des pilotes |</strong>
+            <a href="stage.html">Gestion des offres de stage</a> |
+            Gestion des pilotes |
             <a href="etudiant.php">Gestion des étudiants</a> |
             <a href="">Gestion des candidatures</a>
         </nav>
