@@ -11,7 +11,7 @@ try {
 
     // Données de l'utilisateur à ajouter
     $userEmail = 'yohannodg@gmail.com';
-    $userPassword = 'yohann12345678';
+    $userPassword = 'yohann123456789';
     
     // Hachage sécurisé du mot de passe
     $hashedPassword = password_hash($userPassword, PASSWORD_DEFAULT);
