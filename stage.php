@@ -1,236 +1,211 @@
-<!doctype html>
+<?php
+$servername = "localhost";
+$username = "root";
+$password = ""; 
+$dbname = "projet-web";
+
+try {
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Erreur de connexion : " . $e->getMessage());
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    $description= htmlspecialchars($_POST['titre']);
+    $description= htmlspecialchars($_POST['descriptions']);
+    $competences = htmlspecialchars($_POST['competences']);
+    $entreprise = htmlspecialchars($_POST['entreprise']);
+    $baserenumeration= htmlspecialchars($_POST['baserenumeration']);
+    $nbetudiants= htmlspecialchars($_POST['nbetudiants']);
+    $dateoffre= htmlspecialchars($_POST['dateoffre']);
+
+    if (!empty($titre) && !empty($description) && !empty($competences) && !empty($entreprise) && !empty($baserenumerationl) && !empty($nbetudiants) && !empty($dateoffre)) {
+        if (!empty($_POST['id'])) {
+            // Mise à jour
+            $stmt = $pdo->prepare("UPDATE offresstages SET titre=?, descriptions=?, competences=?, entreprise=?, baserenumeration=?, nbetudiants=?, dateoffre=? WHERE id=?");
+            $stmt->execute([$titre, $descriptions, $competences, $entreprise, $baserenumeration, $nbetudiants, $dateoffre, $_POST['id']]);
+        } else {
+            // Ajout
+            $stmt = $pdo->prepare("INSERT INTO offresstages (titre, descriptions, competences, entreprise, baserenumeration, nbetudiants, dateoffre) VALUES (?, ?)");
+            $stmt->execute([$titre, $descriptions, $competences, $entreprise, $baserenumeration, $nbetudiants, $dateoffre]);
+        }
+        header("Location: ".$_SERVER['PHP_SELF']);
+        exit;
+    }
+}
+
+// Suppression
+if (isset($_GET['delete'])) {
+    $stmt = $pdo->prepare("DELETE FROM offresstages WHERE id=?");
+    $stmt->execute([$_GET['delete']]);
+    header("Location: ".$_SERVER['PHP_SELF']);
+    exit;
+}
+
+// Récupération
+$offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<!DOCTYPE html>
 <html lang="fr">
-    <head>
+<head>
     <meta charset="utf-8">
-    
-    <title>Offres de stage</title>
-    <link rel="stylesheet" href="style/style_entreprises.css">
+    <title>Gestion des offres de stage</title>
+    <link href="style/style_entreprises.css" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <center>
+                <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
+            </center>
+            <div class="user-menu" id="userMenu">
+                <div class="user-info" onclick="toggleMenu()">
+                    <div class="user-avatar">YR</div>
+                    <span class="user-name">Yohann Romarick</span>
+                    <span class="dropdown-icon">▼</span>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" class="dropdown-item">Mon profil</a>
+                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <div class="divider"></div>
+                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                </div>
+            </div>
+        </nav>
+        <nav>
+            <a href="">Accueil</a> |
+            <a href="entreprise.php">Gestion des entreprises</a> |
+            <a href="stage.php">Gestion des offres de stage</a> |
+            Gestion des pilotes |
+            <a href="etudiant.php">Gestion des étudiants</a> |
+            <a href="">Gestion des candidatures</a>
+        </nav>
+    </header>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  </head>
-  <body>
-
-    <center><img src="image/logo-lbp-header.png"></center>
-     <hr>
-
-    <center><h1>Bienvenue sur lebonplan </h1></center>
-
-    <center><h2 class="text-centerb">Offres de stage</h2></center>
-
-    <fieldset>
-        <legend>
-            <p><strong>Rechercher une offre de stage</strong></p>
-        </legend>
-        <form>
-                <input type="text" placeholder="Titre, compétences, description, base de rénumération, nombre d'étudiants ayant postulé, date de l'offre" id="critere" onkeyup="rechercheroffre()"><br><br>
-                <button type="submit">Rechercher</button>
-        </form>
-    </fieldset>
-
-    <!-- Formulaire pour entrer les détails de l'offre -->
-    <fieldset>
-        <legend> 
-            <p><strong>Créer une offre</strong></p>
-        </legend>
+    <main>
         <section>
             <article>
-                <form id="formAjouterOffre">
-                    <label for="titre">Titre :
-                    <input type="text" id="titre" required><br><br></label>
-            
-                    <label for="description">Description :
-                    <input type="text" id="description" required><br><br></label>
-            
-                    <label for="competences">Compétences requises :
-                    <input type="text" id="competences" required><br><br></label>
+                <h2>Rechercher une offre de stage</h2>
+                <input type="text" placeholder="Titre, compétences, descriptions, base de rénumération, nombre d'étudiants ayant postulé, date de l'offre" id="search" onkeyup="searchOffre()" required>
+                
+                <h2>Ajouter/Modifier une offre de stage</h2>
+                <form method="POST" id="offreForm">
+                    <input type="hidden" id="editId" name="id">
                     
-                    <label for="entreprise">Entreprise :
-                    <input type="text" id="entreprise" required><br><br></label>
-            
-                    <label for="basederemuneration">Base de rénumération :
-                    <input type="text" id="basederemuneration" required><br><br></label>
-
-                    <label for="nbetudiants">Nombre d'étudiants ayant postulé :
-                    <input type="number" id="nbetudiants" required><br><br></label>
-            
-                    <label for="dateoffre">Date de publication de l'offre :
-                    <input type="date" id="dateoffre" required><br><br></label>
-            
-                    <button type="submit">Ajouter l'offre</button>
+                    <label for="titre">Titre
+                        <input type="text" name="titre" id="titre" required>
+                    </label>
+                    <label for="descriptions">Description
+                        <input type="text" name="descriptions" id="descriptions" required>
+                    </label>
+                    <label for="competences">Compétences
+                        <input type="text" name="competences" id="competences" required>
+                    </label>
+                    <label for="entreprise">Entreprise
+                        <input type="text" name="entreprise" id="entreprise" required>
+                    </label>
+                    <label for="baserenumeration">Base de rénumération
+                        <input type="text" name="baserenumeration" id="baserenumeration" required>
+                    </label>
+                    <label for="nbetudiants">Email
+                        <input type="text" name="nbetudiants" id="nbetudiants" required>
+                    </label>
+                    <label for="dateoffre">Date de l'offre
+                        <input type="text" name="dateoffre" id="dateoffre" required>
+                    </label>
+                    
+                    <button type="submit" name="ajouter">Enregistrer</button>
                 </form>
+                
+                <h2>Liste des offres de stage</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Description</th>
+                            <th>Compétences</th>
+                            <th>Entreprise</th>
+                            <th>Base de rémunération</th>
+                            <th>Nombre d'étudiants ayant déjà postulé</th>
+                            <th>Dates de l'offre</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="offreTable">
+                        <?php foreach ($offres as $offre): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($offre['titre']) ?></td>
+                            <td><?= htmlspecialchars($offre['descriptions']) ?></td>
+                            <td><?= htmlspecialchars($offre['competences']) ?></td>
+                            <td><?= htmlspecialchars($offre['entreprise']) ?></td>
+                            <td><?= htmlspecialchars($offre['baserenumeration']) ?></td>
+                            <td><?= htmlspecialchars($offre['nbetudiants']) ?></td>
+                            <td><?= htmlspecialchars($offre['dateoffre']) ?></td>
+                            <td>
+                                <button class="edit-btn" onclick="editOffre(
+                                    '<?= $offre['id'] ?>',
+                                    '<?= addslashes($offre['titre']) ?>',
+                                    '<?= addslashes($offre['descriptions']) ?>',
+                                    '<?= addslashes($offre['competences']) ?>',
+                                    '<?= addslashes($offre['entreprise']) ?>'
+                                    '<?= addslashes($offre['baserenumeration']) ?>',
+                                    '<?= addslashes($offre['nbetudiants']) ?>',
+                                    '<?= addslashes($offre['dateoffre']) ?>',
+                                )">Modifier</button>
+                                <a href="?delete=<?= $offre['id'] ?>" onclick="return confirm('Supprimer cette offre de stage?')" class="delete-btn">Supprimer</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </article>
-    
         </section>
-    
-    </fieldset>
-
-<h2><strong>Listes des offres créées</strong></h2>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Titre</th>
-            <th>Description</th>
-            <th>Compétences</th>
-            <th>Entreprise</th>
-            <th>Base de rémunération</th>
-            <th>Nombre d'étudiants ayant déjà postulé</th>
-            <th>Dates de l'offre</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody id="maTable">
-        
-    </tbody>
-</table>
-
-<h2><strong>Répartition par compétences</strong></h2>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Compétences</th>
-            <th>Offres</th>
-        </tr>
-    </thead>
-    <tbody id="compTable">
-        <tr>
-            <td>Réseau</td>
-            <td>A</td>
-        </tr>
-        <tr>
-            <td>Cybersécurité</td>
-            <td>B</td>
-        </tr>
-        <tr> 
-            <td>Développement web</td>
-            <td>BA</td>
-        </tr>
-    </tbody>
-</table>
-
-<h2><strong>Répartition par durée de stage</strong></h2>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Durée de stage</th>
-            <th>Offres</th>
-        </tr>
-    </thead>
-    <tbody id="DureeTable">
-
-    </tbody>
-</table>
-
-<h2><strong>Top des offres sur la wish list</strong></h2>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Top des offres</th>
-            <th>Offres</th>
-        </tr>
-    </thead>
-    <tbody id="wishTable">
-
-    </tbody>
-</table>
-
-<script>
-    let companyCount = 2;
-
-    document.getElementById("formAjouterOffre").addEventListener("submit", function(event) {
-        event.preventDefault(); 
-
-        let titre = document.getElementById("titre").value;
-        let description = document.getElementById("description").value;
-        let competences = document.getElementById("competences").value;
-        let entreprise = document.getElementById("entreprise").value;
-        let basederemuneration = document.getElementById("basederemuneration").value;
-        let nbetudiants = document.getElementById("nbetudiants").value;
-        let dateoffre = document.getElementById("dateoffre").value;
-
-        if (titre && description && competences && basederemuneration && nbetudiants &&  dateoffre) {
-            let table = document.getElementById("maTable");
-            let newRow = table.insertRow();
-            let ratingGroup = "rating_" + companyCount;
-
-            newRow.innerHTML = `
-                <td>${titre}</td>
-                <td>${description}</td>
-                <td>${competences}</td>
-                <td>${entreprise}</td>
-                <td>${basederemuneration}</td>
-                <td>${nbetudiants}</td>
-                <td>${dateoffre}</td>
-                <td>
-                    <button onclick="modifieroffre(this)">Modifier</button>
-                    <button onclick="supprimeroffre(this)">Supprimer</button>
-                </td>
-            `;
-            companyCount++;
-            document.getElementById("formAjouterOffre").reset();
-        }
-    });
-
-    function supprimeroffre(button) {
-        if (confirm("Voulez-vous vraiment supprimer cette entreprise ?")) {
-            let row = button.parentNode.parentNode;
-            row.parentNode.removeChild(row);
-        }
-    }
-
-    function modifieroffre(button) {
-        let row = button.parentNode.parentNode;
-        let cells = row.getElementsByTagName("td");
-
-        let titre = prompt("Modifier le titre:", cells[0].innerText);
-        let description = prompt("Modifier la description:", cells[1].innerText);
-        let competences = prompt("Modifier les compétences:", cells[2].innerText);
-        let entreprise = prompt("Modifier le nom de l'entreprise:", cells[3].innerText);
-        let basederemuneration = prompt("Modifier la base de rémunération:", cells[4].innerText);
-        let nbetudiants = prompt("Modifier le nombre d'étudiants:", cells[5].innerText);
-        let dateoffre = prompt("Modifier la date de publication:", cells[6].innerText);
-
-        if (titre && description && competences && entreprise && basederemuneration && nbetudiants && dateoffre) {
-            cells[0].innerText = titre;
-            cells[1].innerText = description;
-            cells[2].innerText = competences;
-            cells[3].innerText = entreprise;
-            cells[4].innerText = basederemuneration;
-            cells[5].innerText = nbetudiants;
-            cells[6].innerText = dateoffre;
-        }
-    }
-
-    function rechercheroffre() {
-        let input = document.getElementById("critere").value.toLowerCase();
-        console.log(input); // Vérifiez si l'entrée est bien reçue
-        let rows = document.getElementById("maTable").getElementsByTagName("tr");
-
-        for (let row of rows) {
-            if (row.querySelector('th')) continue;
-            //let name = row.getElementsByTagName("td")[0].innerText.toLowerCase();
-            //row.style.display = name.includes(input) ? "" : "none";
-            let cells = row.getElementsByTagName("td");
-            let match = false;
-
-            for (let cell of cells) {
-                if (cell && cell.innerText.toLowerCase().includes(input)) {
-                        match = true;
-                        break;
-                }
-            }
-            row.style.display = match || input === "" ? "" : "none";
-        }
-    }
-</script>
+    </main>
 
     <footer class="navbar footer">
         <hr>
         <em>2024 - Tous droits réservés - Web4All</em>
-    </footer>  
-    
-    
-  </body>
-  
+    </footer>
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        window.onclick = function(e) {
+            if (!e.target.matches('.user-info *')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        }
+
+        function editOffre(id, titre, descriptions, competences, entreprise, baserenumeration, nbetudiants, dateoffre) {
+            document.getElementById('editId').value = id;
+            document.getElementById('titre').value = titre;
+            document.getElementById('descriptions').value = descriptions;
+            document.getElementById('competences').value = competences;
+            document.getElementById('entreprise').value = entreprise;
+            document.getElementById('baserenumeration').value = baserenumeration;
+            document.getElementById('nbetudiants').value = nbetudiants;
+            document.getElementById('dateoffre').value = dateoffre;
+            window.scrollTo(0, 0);
+        }
+
+        function searchOffre() {
+            const filter = document.getElementById('search').value.toLowerCase();
+            document.querySelectorAll('#offreTable tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(filter) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Déconnexion ?')) {
+                window.location.href = 'logout.php';
+            }
+        });
+    </script>
+</body>
 </html>
-   
