@@ -66,7 +66,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
 
     if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        if (!empty($_POST['id'])) {
+        if (!empty($_POST['id'])) { 
             // Mise à jour (sans changer le mot de passe)
             $stmt = $pdo->prepare("UPDATE etudiants SET nom=?, prenom=?, email=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
