@@ -75,7 +75,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             <a href="">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
             <a href="stage.html">Gestion des offres de stage</a> |
-            Gestion des pilotes |
+            <strong>Gestion des pilotes |</strong>
             <a href="etudiant.php">Gestion des étudiants</a> |
             <a href="">Gestion des candidatures</a>
         </nav>
