@@ -24,8 +24,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
             // Ajout
-            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?)");
-            $stmt->execute([$nom, $prenom, $email]);
+            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom) VALUES (?, ?)");
+            $stmt->execute([$nom, $prenom]);
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
