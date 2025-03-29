@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = ""; 
-$dbname = "gestion"; 
+$dbname = "projet-web";
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -12,19 +12,19 @@ try {
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
-    $email= htmlspecialchars($_POST['email']);
     $nom = htmlspecialchars($_POST['nom']);
     $prenom = htmlspecialchars($_POST['prenom']);
+    $email= htmlspecialchars($_POST['email']);
 
-    if (!empty($email) && !empty($nom) && !empty($prenom)) {
+    if (!empty($nom) && !empty($prenom && !empty($email))) {
         if (!empty($_POST['id'])) {
             // Mise à jour
-            $stmt = $pdo->prepare("UPDATE pilotes SET email=?, nom=?, prenom=? WHERE id=?");
-            $stmt->execute([$email, $nom, $prenom, $_POST['id']]);
+            $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=?, email=? WHERE id=?");
+            $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
             // Ajout
-            $stmt = $pdo->prepare("INSERT INTO pilotes (email, nom, prenom) VALUES (?, ?)");
-            $stmt->execute([$email, $nom, $prenom]);
+            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?)");
+            $stmt->execute([$nom, $prenom, $email]);
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
@@ -73,8 +73,8 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
         <nav>
             <a href="">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.html">Gestion des offres de stage</a> |
-            Gestion des pilotes |
+            <a href="stage.php">Gestion des offres de stage</a> |
+            <strong>Gestion des pilotes |</strong>
             <a href="etudiant.php">Gestion des étudiants</a> |
             <a href="">Gestion des candidatures</a>
         </nav>
@@ -90,15 +90,15 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                 <form method="POST" id="piloteForm">
                     <input type="hidden" id="editId" name="id">
                     
-                    <label for="email">Email
-                        <input type="text" name="email" id="email" required>
-                    </label>
                     <label for="nom">Nom
                         <input type="text" name="nom" id="nom" required>
                     </label>
                     
                     <label for="prenom">Prénom
                         <input type="text" name="prenom" id="prenom" required>
+                    </label>
+                    <label for="email">Email
+                        <input type="text" name="email" id="email" required>
                     </label>
                     
                     <button type="submit" name="ajouter">Enregistrer</button>
@@ -108,24 +108,24 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                 <table>
                     <thead>
                         <tr>
-                            <th>Email</th>
                             <th>Nom</th>
                             <th>Prénom</th>
+                            <th>Email</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="piloteTable">
                         <?php foreach ($pilotes as $pilote): ?>
                         <tr>
-                            <td><?= htmlspecialchars($pilote['email']) ?></td>
                             <td><?= htmlspecialchars($pilote['nom']) ?></td>
                             <td><?= htmlspecialchars($pilote['prenom']) ?></td>
+                            <td><?= htmlspecialchars($pilote['email']) ?></td>
                             <td>
                                 <button class="edit-btn" onclick="editPilote(
                                     '<?= $pilote['id'] ?>',
-                                    '<?= addslashes($pilote['email']) ?>',
                                     '<?= addslashes($pilote['nom']) ?>',
                                     '<?= addslashes($pilote['prenom']) ?>'
+                                    '<?= addslashes($pilote['email']) ?>',
                                 )">Modifier</button>
                                 <a href="?delete=<?= $pilote['id'] ?>" onclick="return confirm('Supprimer ce pilote?')" class="delete-btn">Supprimer</a>
                             </td>
@@ -155,9 +155,9 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
 
         function editPilote(id, email, nom, prenom) {
             document.getElementById('editId').value = id;
-            document.getElementById('email').value = email;
             document.getElementById('nom').value = nom;
             document.getElementById('prenom').value = prenom;
+            document.getElementById('email').value = email;
             window.scrollTo(0, 0);
         }
 
