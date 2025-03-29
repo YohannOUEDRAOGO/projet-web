@@ -153,7 +153,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        function editPilote(id, nom, prenom) {
+        function editPilote(id, email, nom, prenom) {
             document.getElementById('editId').value = id;
             document.getElementById('email').value = email;
             document.getElementById('nom').value = nom;
