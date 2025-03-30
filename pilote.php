@@ -1,37 +1,113 @@
 <?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require 'vendor/autoload.php';
+
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "projet-web";
-$dbname = "projet-web";
- 
+$dbname = "gestion";
+
+function genererMotDePasseUnique($pdo) {
+    $majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $minuscules = 'abcdefghijklmnopqrstuvwxyz';
+    $chiffres = '0123456789';
+    $speciaux = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    $tentatives = 0;
+    $maxTentatives = 100;
+    
+    do {
+        $motDePasse = '';
+        $motDePasse .= $majuscules[rand(0, strlen($majuscules) - 1)];
+        $motDePasse .= $minuscules[rand(0, strlen($minuscules) - 1)];
+        $motDePasse .= $chiffres[rand(0, strlen($chiffres) - 1)];
+        $motDePasse .= $speciaux[rand(0, strlen($speciaux) - 1)];
+        
+        $tousCaracteres = $majuscules . $minuscules . $chiffres . $speciaux;
+        while (strlen($motDePasse) < 12) {
+            $motDePasse .= $tousCaracteres[rand(0, strlen($tousCaracteres) - 1)];
+        }
+        
+        $motDePasse = str_shuffle($motDePasse);
+        $motDePasseHash = password_hash($motDePasse, PASSWORD_BCRYPT);
+        
+        $stmt = $pdo->prepare("SELECT id FROM pilotes WHERE mot_de_passe = ?");
+        $stmt->execute([$motDePasseHash]);
+        $existe = $stmt->rowCount() > 0;
+        
+        $tentatives++;
+        if ($tentatives >= $maxTentatives) {
+            throw new Exception("Impossible de générer un mot de passe unique après $maxTentatives tentatives");
+        }
+    } while ($existe);
+    
+    return ['plain' => $motDePasse, 'hash' => $motDePasseHash];
+}
+
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Erreur de connexion : " . $e->getMessage());
 }
- 
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $nom = htmlspecialchars($_POST['nom']);
     $prenom = htmlspecialchars($_POST['prenom']);
-    $email= htmlspecialchars($_POST['email']);
- 
-    if (!empty($nom) && !empty($prenom && !empty($email))) {
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+
+    if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (!empty($_POST['id'])) {
-            // Mise à jour
+            // Mise à jour (sans changer le mot de passe)
             $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=?, email=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
-            // Ajout
-            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?,?)");
-            $stmt->execute([$nom, $prenom, $email]);
+            // Vérifier si l'email existe déjà
+            $check = $pdo->prepare("SELECT id FROM pilotes WHERE email = ?");
+            $check->execute([$email]);
+            
+            if ($check->rowCount() > 0) {
+                echo "<script>alert('Cet email est déjà utilisé par un autre pilote');</script>";
+            } else {
+                try {
+                    // Génération d'un mot de passe unique
+                    $passwordData = genererMotDePasseUnique($pdo);
+                    
+                    // Ajout dans la base de données
+                    $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$nom, $prenom, $email, $passwordData['hash']]);
+                    
+                    // Envoi d'email avec PHPMailer
+                    $mail = new PHPMailer(true);
+                    try {
+                        $mail->isSMTP();
+                        $mail->Host = 'smtp.gmail.com';
+                        $mail->SMTPAuth = true;
+                        $mail->Username = 'cryptosteph17@gmail.com'; // Remplacez par votre email
+                        $mail->Password = 'zgybnrnzconvsjvd'; // Remplacez par votre mot de passe
+                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port = 587;
+                
+                        $mail->setFrom('no-reply@lebonplan.com', 'Le Bon Plan');
+                        $mail->addAddress($email);
+                        $mail->Subject = 'Création de compte pilote';
+                        $mail->Body = "Bonjour $prenom $nom,\n\nVotre compte pilote a bien été créé.\nIdentifiants:\nEmail: $email\nMot de Passe: {$passwordData['plain']}\n\nCordialement,\nL'équipe pédagogique.";
+                
+                        $mail->send();
+                    } catch (Exception $e) {
+                        error_log("Erreur d'envoi d'email: " . $e->getMessage());
+                    }
+                } catch (Exception $e) {
+                    die("Erreur: " . $e->getMessage());
+                }
+            }
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
     }
 }
- 
+
 // Suppression
 if (isset($_GET['delete'])) {
     $stmt = $pdo->prepare("DELETE FROM pilotes WHERE id=?");
@@ -39,11 +115,11 @@ if (isset($_GET['delete'])) {
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
- 
+
 // Récupération
 $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
 ?>
- 
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -80,7 +156,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             <a href="">Gestion des candidatures</a>
         </nav>
     </header>
- 
+
     <main>
         <section>
             <article>
@@ -99,7 +175,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                         <input type="text" name="prenom" id="prenom" required>
                     </label>
                     <label for="email">Email
-                        <input type="text" name="email" id="email" required>
+                        <input type="email" name="email" id="email" required>
                     </label>
                    
                     <button type="submit" name="ajouter">Enregistrer</button>
@@ -125,8 +201,8 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                                 <button class="edit-btn" onclick="editPilote(
                                     '<?= $pilote['id'] ?>',
                                     '<?= addslashes($pilote['nom']) ?>',
-                                    '<?= addslashes($pilote['prenom']) ?>'
-                                    '<?= addslashes($pilote['email']) ?>',
+                                    '<?= addslashes($pilote['prenom']) ?>',
+                                    '<?= addslashes($pilote['email']) ?>'
                                 )">Modifier</button>
                                 <a href="?delete=<?= $pilote['id'] ?>" onclick="return confirm('Supprimer ce pilote?')" class="delete-btn">Supprimer</a>
                             </td>
@@ -137,31 +213,31 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             </article>
         </section>
     </main>
- 
+
     <footer class="navbar footer">
         <hr>
         <em>2024 - Tous droits réservés - Web4All</em>
     </footer>
- 
+
     <script>
         function toggleMenu() {
             document.getElementById('dropdownMenu').classList.toggle('show');
         }
- 
+
         window.onclick = function(e) {
             if (!e.target.matches('.user-info *')) {
                 document.getElementById('dropdownMenu').classList.remove('show');
             }
         }
- 
-        function editPilote(id, email, nom, prenom) {
+
+        function editPilote(id, nom, prenom, email) {
             document.getElementById('editId').value = id;
             document.getElementById('nom').value = nom;
             document.getElementById('prenom').value = prenom;
             document.getElementById('email').value = email;
             window.scrollTo(0, 0);
         }
- 
+
         function searchPilote() {
             const filter = document.getElementById('search').value.toLowerCase();
             document.querySelectorAll('#piloteTable tr').forEach(row => {
@@ -169,7 +245,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                 row.style.display = text.includes(filter) ? '' : 'none';
             });
         }
- 
+
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
