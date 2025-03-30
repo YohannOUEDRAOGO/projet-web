@@ -1,4 +1,12 @@
 <?php
+require_once 'check_session.php';
+verifySession();
+// Vérification de la connexion
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
 $servername = "localhost";
 $username = "root";
 $password = ""; 
@@ -11,6 +19,9 @@ try {
     die("Erreur de connexion : " . $e->getMessage());
 }
 
+// Récupération des informations de l'utilisateur connecté
+$currentUser = $_SESSION['user'];
+
 // Récupérer la liste des entreprises pour le select
 $entreprises = $pdo->query("SELECT id, nom FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -19,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $titre = htmlspecialchars($_POST['titre'] ?? '');
     $description = htmlspecialchars($_POST['description'] ?? '');
     $competences = htmlspecialchars($_POST['competences'] ?? '');
-    $nom_entreprise = htmlspecialchars($_POST['nom_entreprise'] ?? ''); // Nouveau champ
+    $nom_entreprise = htmlspecialchars($_POST['nom_entreprise'] ?? '');
     $lieu = htmlspecialchars($_POST['lieu'] ?? '');
     $base_remuneration = htmlspecialchars($_POST['base_remuneration'] ?? '');
     $date_publication = $_POST['date_publication'] ?? date('Y-m-d');
@@ -88,7 +99,6 @@ if (isset($_GET['delete'])) {
 }
 
 // Récupération des offres avec le nom de l'entreprise
-// Récupération des offres avec le nom de l'entreprise
 $offres = $pdo->query("
     SELECT o.*, e.nom AS entreprise_nom 
     FROM offres_stage o 
@@ -96,7 +106,6 @@ $offres = $pdo->query("
     ORDER BY o.date_publication DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -113,25 +122,33 @@ $offres = $pdo->query("
             </center>
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
+                    <div class="user-avatar">
+                        <?php 
+                            echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
+                        ?>
+                    </div>
+                    <span class="user-name">
+                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                    </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <a href="profil.php" class="dropdown-item">Mon profil</a>
+                    <?php if ($currentUser['role'] === 'etudiant'): ?>
+                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                    <?php endif; ?>
                     <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
                 </div>
             </div>
         </nav>
         <nav>
-            <a href="">Accueil</a> |
+            <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.php">Gestion des offres de stage</a> |
+            <strong>Gestion des offres de stage</strong> |
             <a href="pilote.php">Gestion des pilotes</a> |
             <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="">Gestion des candidatures</a>
+            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
@@ -206,7 +223,7 @@ $offres = $pdo->query("
                                     '<?= addslashes($offre['titre']) ?>',
                                     '<?= addslashes($offre['description']) ?>',
                                     '<?= addslashes($offre['competences_requises']) ?>',
-                                    '<?= $offre['entreprise_id'] ?>',
+                                    '<?= addslashes($offre['entreprise_nom']) ?>',
                                     '<?= addslashes($offre['lieu']) ?>',
                                     '<?= addslashes($offre['base_remuneration']) ?>',
                                     '<?= date('Y-m-d', strtotime($offre['date_publication'])) ?>',
@@ -238,7 +255,7 @@ $offres = $pdo->query("
             }
         }
 
-        function editOffre(id, titre, description, competences, entreprise_id, entreprise_nom, lieu, base_remuneration, date_publication, date_fin) {
+        function editOffre(id, titre, description, competences, entreprise_nom, lieu, base_remuneration, date_publication, date_fin) {
             document.getElementById('editId').value = id;
             document.getElementById('titre').value = titre;
             document.getElementById('description').value = description;
@@ -250,6 +267,7 @@ $offres = $pdo->query("
             document.getElementById('date_fin').value = date_fin;
             window.scrollTo(0, 0);
         }
+
         function searchOffre() {
             const filter = document.getElementById('search').value.toLowerCase();
             document.querySelectorAll('#offreTable tr').forEach(row => {
@@ -261,7 +279,7 @@ $offres = $pdo->query("
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
-                window.location.href = 'logout.php';
+                window.location.href = 'authentification.php';
             }
         });
     </script>

@@ -1,37 +1,47 @@
 <?php
+require_once 'check_session.php';
+verifySession();
+// Vérification de la connexion
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
 $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "projet-web";
-$dbname = "projet-web";
- 
+
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Erreur de connexion : " . $e->getMessage());
 }
- 
+
+// Récupération des informations de l'utilisateur connecté
+$currentUser = $_SESSION['user'];
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $nom = htmlspecialchars($_POST['nom']);
     $prenom = htmlspecialchars($_POST['prenom']);
-    $email= htmlspecialchars($_POST['email']);
- 
-    if (!empty($nom) && !empty($prenom && !empty($email))) {
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+
+    if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (!empty($_POST['id'])) {
             // Mise à jour
             $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=?, email=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
             // Ajout
-            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?,?)");
+            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?, ?)");
             $stmt->execute([$nom, $prenom, $email]);
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
     }
 }
- 
+
 // Suppression
 if (isset($_GET['delete'])) {
     $stmt = $pdo->prepare("DELETE FROM pilotes WHERE id=?");
@@ -39,11 +49,11 @@ if (isset($_GET['delete'])) {
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
- 
+
 // Récupération
 $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
 ?>
- 
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -59,28 +69,36 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             </center>
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
+                    <div class="user-avatar">
+                        <?php 
+                            echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
+                        ?>
+                    </div>
+                    <span class="user-name">
+                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                    </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <a href="profil.php" class="dropdown-item">Mon profil</a>
+                    <?php if ($currentUser['role'] === 'etudiant'): ?>
+                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                    <?php endif; ?>
                     <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
                 </div>
             </div>
         </nav>
         <nav>
-            <a href="">Accueil</a> |
+            <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.html">Gestion des offres de stage</a> |
-            <strong>Gestion des pilotes |</strong>
+            <a href="stage.php">Gestion des offres de stage</a> |
+            <strong>Gestion des pilotes</strong> |
             <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="">Gestion des candidatures</a>
+            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
- 
+
     <main>
         <section>
             <article>
@@ -99,7 +117,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                         <input type="text" name="prenom" id="prenom" required>
                     </label>
                     <label for="email">Email
-                        <input type="text" name="email" id="email" required>
+                        <input type="email" name="email" id="email" required>
                     </label>
                    
                     <button type="submit" name="ajouter">Enregistrer</button>
@@ -125,8 +143,8 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                                 <button class="edit-btn" onclick="editPilote(
                                     '<?= $pilote['id'] ?>',
                                     '<?= addslashes($pilote['nom']) ?>',
-                                    '<?= addslashes($pilote['prenom']) ?>'
-                                    '<?= addslashes($pilote['email']) ?>',
+                                    '<?= addslashes($pilote['prenom']) ?>',
+                                    '<?= addslashes($pilote['email']) ?>'
                                 )">Modifier</button>
                                 <a href="?delete=<?= $pilote['id'] ?>" onclick="return confirm('Supprimer ce pilote?')" class="delete-btn">Supprimer</a>
                             </td>
@@ -137,31 +155,31 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             </article>
         </section>
     </main>
- 
+
     <footer class="navbar footer">
         <hr>
         <em>2024 - Tous droits réservés - Web4All</em>
     </footer>
- 
+
     <script>
         function toggleMenu() {
             document.getElementById('dropdownMenu').classList.toggle('show');
         }
- 
+
         window.onclick = function(e) {
             if (!e.target.matches('.user-info *')) {
                 document.getElementById('dropdownMenu').classList.remove('show');
             }
         }
- 
-        function editPilote(id, email, nom, prenom) {
+
+        function editPilote(id, nom, prenom, email) {
             document.getElementById('editId').value = id;
             document.getElementById('nom').value = nom;
             document.getElementById('prenom').value = prenom;
             document.getElementById('email').value = email;
             window.scrollTo(0, 0);
         }
- 
+
         function searchPilote() {
             const filter = document.getElementById('search').value.toLowerCase();
             document.querySelectorAll('#piloteTable tr').forEach(row => {
@@ -169,7 +187,7 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
                 row.style.display = text.includes(filter) ? '' : 'none';
             });
         }
- 
+
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
             if (confirm('Déconnexion ?')) {
