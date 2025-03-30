@@ -7,6 +7,44 @@ $company = htmlspecialchars($_GET['company'] ?? '');
 $location = htmlspecialchars($_GET['location'] ?? '');
 $publishDate = htmlspecialchars($_GET['date'] ?? '');
 
+// Récupérer l'ID de l'offre depuis l'URL
+$offerId = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Si l'ID est valide, récupérer les détails complets depuis la base
+if ($offerId > 0) {
+    try {
+        $pdo = new PDO("mysql:host=localhost;dbname=gestion;charset=utf8", "root", "");
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        $stmt = $pdo->prepare("
+            SELECT o.*, e.nom AS entreprise_nom 
+            FROM offres_stage o
+            LEFT JOIN entreprises e ON o.entreprise_id = e.id
+            WHERE o.id = :id
+        ");
+        $stmt->execute([':id' => $offerId]);
+        $offerDetails = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($offerDetails) {
+            $offerTitle = htmlspecialchars($offerDetails['titre']);
+            $company = htmlspecialchars($offerDetails['entreprise_nom']);
+            $location = htmlspecialchars($offerDetails['lieu']);
+            $publishDate = date('d/m/Y', strtotime($offerDetails['date_publication']));
+            $description = htmlspecialchars($offerDetails['description']);
+            $competences = htmlspecialchars($offerDetails['competences_requises']);
+            $dateFin = date('d/m/Y', strtotime($offerDetails['date_fin']));
+        }
+    } catch (PDOException $e) {
+        die("Erreur de connexion : " . $e->getMessage());
+    }
+} else {
+    // Fallback aux paramètres GET si pas d'ID ou échec de la requête
+    $offerTitle = htmlspecialchars($_GET['title'] ?? 'Offre de stage');
+    $company = htmlspecialchars($_GET['company'] ?? '');
+    $location = htmlspecialchars($_GET['location'] ?? '');
+    $publishDate = htmlspecialchars($_GET['date'] ?? '');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
     // Validation des champs
     $title = htmlspecialchars($_POST['title'] ?? '');
@@ -238,6 +276,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
                 <div class="offer-details">
                     <h3><?= $offerTitle ?></h3>
                     <p class="small"><?= $company ?> | <?= $location ?> | Publiée le <?= $publishDate ?></p>
+                    <?php if (isset($description)): ?>
+                        <p><strong>Description :</strong> <?= $description ?></p>
+                    <?php endif; ?>
+                    <?php if (isset($competences)): ?>
+                        <p><strong>Compétences requises :</strong> <?= $competences ?></p>
+                    <?php endif; ?>
+                    <?php if (isset($dateFin)): ?>
+                        <p><strong>Date limite :</strong> <?= $dateFin ?></p>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ($successMessage): ?>
@@ -265,6 +312,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
 
                     <label>COURRIEL
                         <input name="email" id="email" type="email" required>
+                        <input type="hidden" name="offer_id" value="<?= $offerId ?>">
                     </label>
 
                     <label>A PROPOS DE VOUS

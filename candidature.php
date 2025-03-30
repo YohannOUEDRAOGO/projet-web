@@ -233,7 +233,7 @@ $offres = $pdo->query("
                                 <p><?= htmlspecialchars(substr($offre['description'], 0, 100)) ?>...</p>
                                 <p><strong>Compétences requises:</strong> <?= htmlspecialchars(substr($offre['competences_requises'], 0, 50)) ?>...</p>
                                 <p><strong>Date limite:</strong> <?= date('d/m/Y', strtotime($offre['date_fin'])) ?></p>
-                                <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
+                                <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>&title=<?= urlencode($offre['titre']) ?>&company=<?= urlencode($offre['entreprise_nom']) ?>&location=<?= urlencode($offre['lieu']) ?>&date=<?= urlencode(date('d/m/Y', strtotime($offre['date_publication']))) ?>">POSTULER</a>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
