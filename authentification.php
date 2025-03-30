@@ -1,5 +1,16 @@
 <?php
+ini_set('session.gc_maxlifetime', 10800); // 3 heures en secondes
+ini_set('session.cookie_lifetime', 10800);
 session_start();
+
+// Vérifier l'inactivité
+if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 10800)) {
+    // Session expirée
+    session_unset();
+    session_destroy();
+    header('Location: authentification.php?error=session_expired');
+    exit();
+}
 
 // Protection contre les attaques de fixation de session
 if (empty($_SESSION['csrf_token'])) {
@@ -68,7 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'prenom' => $user['prenom'],
                     'role' => $user['role'],
                     'ip' => $_SERVER['REMOTE_ADDR'],
-                    'user_agent' => $_SERVER['HTTP_USER_AGENT']
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+                    'login_time' => time() 
                 ];
 
                 // Régénération de session

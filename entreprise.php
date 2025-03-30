@@ -1,6 +1,6 @@
 <?php
-session_start(); // Ajoutez cette ligne au tout début
-
+require_once 'check_session.php';
+verifySession();
 // Vérification de la connexion
 if (!isset($_SESSION['user'])) {
     header('Location: authentification.php');
@@ -9,8 +9,8 @@ if (!isset($_SESSION['user'])) {
 
 $servername = "localhost";
 $username = "root";
-$password = ""; 
-$dbname = "projet-web";
+$password = "";
+$dbname = "gestion";
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -100,12 +100,12 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
 </div>
         </nav>
         <nav>
-            <a href="">Accueil</a> |
+            <a href="candidature.php">Accueil</a> |
             <strong>Gestion des entreprises</strong>|
             <a href="stage.php">Gestion des offres de stage</a> |
             <a href="pilote.php">Gestion des pilotes</a> |
             <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="">Gestion des candidatures</a>
+            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
