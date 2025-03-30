@@ -45,6 +45,7 @@ if ($offerId > 0) {
     $publishDate = htmlspecialchars($_GET['date'] ?? '');
 }
 
+// Dans la partie POST du fichier offres-stage-postuler.php
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
     // Validation des champs
     $title = htmlspecialchars($_POST['title'] ?? '');
@@ -53,14 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
     $email = htmlspecialchars($_POST['email'] ?? '');
     $feedbacks = htmlspecialchars($_POST['feedbacks'] ?? '');
     $majeur = $_POST['majeur'] ?? '';
+    $categories = isset($_POST['category']) ? implode(", ", $_POST['category']) : 'Aucune';
+    
+    // Créer un identifiant unique pour l'utilisateur
+    $userFolder = mb_strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $lastname . '_' . $surname));
+    $uploadDir = 'uploads/' . $userFolder . '/';
+    
+    // Créer le répertoire s'il n'existe pas
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
 
-    // Gestion du fichier
+    // Gestion du fichier CV
     if (isset($_FILES['cv']) && $_FILES['cv']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = 'uploads/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-
         $filename = basename($_FILES['cv']['name']);
         $uniqueFilename = time() . '_' . $filename;
         $uploadFile = $uploadDir . $uniqueFilename;
@@ -69,16 +75,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
             $errorMessage = "Erreur : Le fichier est trop volumineux (2Mo max).";
         } else {
             if (move_uploaded_file($_FILES['cv']['tmp_name'], $uploadFile)) {
+                // Créer un fichier texte avec les informations du candidat
+                $infoContent = "Candidature pour: $offerTitle\n";
+                $infoContent .= "Entreprise: $company\n\n";
+                $infoContent .= "Informations candidat:\n";
+                $infoContent .= "Civilite: " . ($title === 'ms' ? 'Madame' : 'Monsieur') . "\n";
+                $infoContent .= "Nom: $lastname\n";
+                $infoContent .= "Prénom: $surname\n";
+                $infoContent .= "Email: $email\n";
+                $infoContent .= "Majeur: " . ($majeur === 'yes' ? 'Oui' : 'Non') . "\n";
+                $infoContent .= "Informations complémentaires: $categories\n";
+                $infoContent .= "Message pour le recruteur:\n$feedbacks\n";
+                $infoContent .= "Date de candidature: " . date('d/m/Y H:i:s') . "\n";
+                $infoContent .= "CV: $uniqueFilename";
+                
+                file_put_contents($uploadDir . 'info_candidature.txt', $infoContent);
+
                 $successMessage = "Votre candidature a bien été envoyée !";
-                // Récupérer les données à enregistrer
+                
+                // Enregistrement dans le fichier JSON
                 $newCandidature = [
                     "entreprise" => $company,
                     "offre" => $offerTitle,
-                    "date" => date("d/m/Y"), // Date actuelle
-                    "statut" => "En attente"
+                    "date" => date("d/m/Y"),
+                    "statut" => "En attente",
+                    "dossier" => $userFolder
                 ];
 
-                // Lire les candidatures existantes
                 $file = 'candidatures.json';
                 $candidatures = [];
 
@@ -87,10 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
                     $candidatures = json_decode($jsonData, true);
                 }
 
-                // Ajouter la nouvelle candidature
                 $candidatures[] = $newCandidature;
-
-                // Sauvegarder
                 file_put_contents($file, json_encode($candidatures, JSON_PRETTY_PRINT));
             } else {
                 $errorMessage = "Erreur lors du téléchargement du CV.";
