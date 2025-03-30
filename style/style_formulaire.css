@@ -1,0 +1,112 @@
+.formulaire {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.formulaire label {
+    display : flex;
+    flex-direction: column;
+    align-items: flex-start;
+    font-weight: bold;
+    color: #EA712E;
+}
+
+.formulaire input {
+    margin-top: 5px;
+    border: none;
+    border-radius: 5px;
+    height: 25px;
+}
+
+.formulaire select {
+    margin-top: 5px;
+    border: none;
+    border-radius: 5px;
+    height: 25px;
+}
+
+.formulaire textarea {
+    margin-top: 5px;
+    border: none;
+    border-radius: 5px;
+    height: 100px;
+    width: 700px;
+    resize: none;
+}
+
+.formulaire button {
+    background-color: #EA712E;
+    color: white;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    height: 35px;
+    width: 100px;
+    transition: all 0.2s ease-out;
+}
+
+.buttons input {
+    font-weight: bold;
+    margin-top: 0px;
+    border: solid 1px;
+    height: 35px;
+    width: 110px;
+    transition: all 0.2s ease-out;
+}
+
+.formulaire button:hover {
+    transform: scale(1.03);
+    cursor: pointer;
+}
+
+.buttons input:hover {
+    transform: scale(1.03);
+    cursor: pointer;
+}
+
+input[type="radio" i] {
+    margin: 5px;
+}
+
+.formulaire .checkbox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    accent-color: #EA712E;
+}
+
+.formulaire .checkbox2 {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    accent-color: #EA712E;
+}
+
+.formulaire .box {
+    font-weight: normal;
+    display: flex;
+    align-items: center;
+    height: 20px;
+    color: black;
+    font-size: 15px;
+}
+
+.formulaire .upload-btn {
+    margin-top: 5px;
+    display: inline-block;
+    background-color: #EA712E;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+}

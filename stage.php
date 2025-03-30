@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = ""; 
-$dbname = "projet-web";
+$dbname = "gestion";
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -11,41 +11,92 @@ try {
     die("Erreur de connexion : " . $e->getMessage());
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
-    $titre= htmlspecialchars($_POST['titre']);
-    $descriptions= htmlspecialchars($_POST['descriptions']);
-    $competences = htmlspecialchars($_POST['competences']);
-    $entreprise = htmlspecialchars($_POST['entreprise']);
-    $baserenumeration= htmlspecialchars($_POST['baserenumeration']);
-    $nbetudiants= htmlspecialchars($_POST['nbetudiants']);
-    $dateoffre= htmlspecialchars($_POST['dateoffre']);
+// Récupérer la liste des entreprises pour le select
+$entreprises = $pdo->query("SELECT id, nom FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!empty($titre) && !empty($descriptions) && !empty($competences) && !empty($entreprise) && !empty($baserenumerationl) && !empty($nbetudiants) && !empty($dateoffre)) {
-        if (!empty($_POST['id'])) {
-            // Mise à jour
-            $stmt = $pdo->prepare("UPDATE offresstages SET titre=?, descriptions=?, competences=?, entreprise=?, baserenumeration=?, nbetudiants=?, dateoffre=? WHERE id=?");
-            $stmt->execute([$titre, $descriptions, $competences, $entreprise, $baserenumeration, $nbetudiants, $dateoffre, $_POST['id']]);
-        } else {
-            // Ajout
-            $stmt = $pdo->prepare("INSERT INTO offresstages (titre, descriptions, competences, entreprise, baserenumeration, nbetudiants, dateoffre) VALUES (?, ?)");
-            $stmt->execute([$titre, $descriptions, $competences, $entreprise, $baserenumeration, $nbetudiants, $dateoffre]);
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    // Récupération et validation des données
+    $titre = htmlspecialchars($_POST['titre'] ?? '');
+    $description = htmlspecialchars($_POST['description'] ?? '');
+    $competences = htmlspecialchars($_POST['competences'] ?? '');
+    $nom_entreprise = htmlspecialchars($_POST['nom_entreprise'] ?? ''); // Nouveau champ
+    $lieu = htmlspecialchars($_POST['lieu'] ?? '');
+    $base_remuneration = htmlspecialchars($_POST['base_remuneration'] ?? '');
+    $date_publication = $_POST['date_publication'] ?? date('Y-m-d');
+    $date_fin = $_POST['date_fin'] ?? date('Y-m-d', strtotime('+1 month'));
+
+    // Validation des champs obligatoires
+    $errors = [];
+    if (empty($titre)) $errors[] = "Le titre est obligatoire";
+    if (empty($description)) $errors[] = "La description est obligatoire";
+    if (empty($nom_entreprise)) $errors[] = "Le nom de l'entreprise est obligatoire";
+    if (empty($lieu)) $errors[] = "Le lieu est obligatoire";
+    if (empty($date_publication)) $errors[] = "La date de publication est obligatoire";
+    if (empty($date_fin)) $errors[] = "La date de fin est obligatoire";
+
+    if (empty($errors)) {
+        try {
+            // Vérifier si l'entreprise existe déjà
+            $stmt = $pdo->prepare("SELECT id FROM entreprises WHERE nom = ?");
+            $stmt->execute([$nom_entreprise]);
+            $entreprise = $stmt->fetch();
+
+            if (!$entreprise) {
+                // Créer la nouvelle entreprise si elle n'existe pas
+                $stmt = $pdo->prepare("INSERT INTO entreprises (nom) VALUES (?)");
+                $stmt->execute([$nom_entreprise]);
+                $entreprise_id = $pdo->lastInsertId();
+            } else {
+                $entreprise_id = $entreprise['id'];
+            }
+
+            if (!empty($_POST['id'])) {
+                // Mise à jour
+                $stmt = $pdo->prepare("UPDATE offres_stage SET titre=?, description=?, competences_requises=?, entreprise_id=?, lieu=?, base_remuneration=?, date_publication=?, date_fin=? WHERE id=?");
+                $stmt->execute([$titre, $description, $competences, $entreprise_id, $lieu, $base_remuneration, $date_publication, $date_fin, $_POST['id']]);
+            } else {
+                // Ajout
+                $stmt = $pdo->prepare("INSERT INTO offres_stage (titre, description, competences_requises, entreprise_id, lieu, base_remuneration, date_publication, date_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$titre, $description, $competences, $entreprise_id, $lieu, $base_remuneration, $date_publication, $date_fin]);
+            }
+            header("Location: ".$_SERVER['PHP_SELF']);
+            exit;
+        } catch (PDOException $e) {
+            $errors[] = "Erreur de base de données : " . $e->getMessage();
         }
-        header("Location: ".$_SERVER['PHP_SELF']);
-        exit;
+    }
+    
+    // Afficher les erreurs si elles existent
+    if (!empty($errors)) {
+        echo '<div class="error-message">';
+        echo '<p>Des erreurs ont été détectées :</p>';
+        echo '<ul>';
+        foreach ($errors as $error) {
+            echo '<li>'.htmlspecialchars($error).'</li>';
+        }
+        echo '</ul>';
+        echo '</div>';
     }
 }
 
 // Suppression
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM offresstages WHERE id=?");
+    $stmt = $pdo->prepare("DELETE FROM offres_stage WHERE id=?");
     $stmt->execute([$_GET['delete']]);
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
 
-// Récupération
-$offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
+// Récupération des offres avec le nom de l'entreprise
+// Récupération des offres avec le nom de l'entreprise
+$offres = $pdo->query("
+    SELECT o.*, e.nom AS entreprise_nom 
+    FROM offres_stage o 
+    LEFT JOIN entreprises e ON o.entreprise_id = e.id
+    ORDER BY o.date_publication DESC
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
+
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -88,32 +139,42 @@ $offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
         <section>
             <article>
                 <h2>Rechercher une offre de stage</h2>
-                <input type="text" placeholder="Titre, compétences, descriptions, base de rénumération, nombre d'étudiants ayant postulé, date de l'offre" id="search" onkeyup="searchOffre()" required>
+                <input type="text" placeholder="Titre, compétences, lieu..." id="search" onkeyup="searchOffre()" required>
                 
                 <h2>Ajouter/Modifier une offre de stage</h2>
                 <form method="POST" id="offreForm">
-                    <input type="hidden" id="editId" name="id">
+                    <input type="hidden" id="editId" name="id" value="<?= $_POST['id'] ?? '' ?>">
                     
                     <label for="titre">Titre
-                        <input type="text" name="titre" id="titre" required>
+                        <input type="text" name="titre" id="titre" value="<?= htmlspecialchars($_POST['titre'] ?? '') ?>" required>
                     </label>
-                    <label for="descriptions">Description
-                        <input type="text" name="descriptions" id="descriptions" required>
+                    
+                    <label for="description">Description
+                        <textarea name="description" id="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
                     </label>
-                    <label for="competences">Compétences
-                        <input type="text" name="competences" id="competences" required>
+                    
+                    <label for="competences">Compétences requises
+                        <textarea name="competences" id="competences"><?= htmlspecialchars($_POST['competences'] ?? '') ?></textarea>
                     </label>
-                    <label for="entreprise">Entreprise
-                        <input type="text" name="entreprise" id="entreprise" required>
+                    
+                    <label for="nom_entreprise">Nom de l'entreprise
+                        <input type="text" name="nom_entreprise" id="nom_entreprise" value="<?= htmlspecialchars($_POST['nom_entreprise'] ?? '') ?>" required>
                     </label>
-                    <label for="baserenumeration">Base de rénumération
-                        <input type="text" name="baserenumeration" id="baserenumeration" required>
+                    
+                    <label for="lieu">Lieu
+                        <input type="text" name="lieu" id="lieu" value="<?= htmlspecialchars($_POST['lieu'] ?? '') ?>" required>
                     </label>
-                    <label for="nbetudiants">Nombre d'étudiants ayant postulé
-                        <input type="text" name="nbetudiants" id="nbetudiants" required>
+                    
+                    <label for="base_remuneration">Base de rémunération
+                        <input type="text" name="base_remuneration" id="base_remuneration" value="<?= htmlspecialchars($_POST['base_remuneration'] ?? '') ?>">
                     </label>
-                    <label for="dateoffre">Date de l'offre
-                        <input type="date" name="dateoffre" id="dateoffre" required>
+                    
+                    <label for="date_publication">Date de publication
+                        <input type="date" name="date_publication" id="date_publication" value="<?= htmlspecialchars($_POST['date_publication'] ?? date('Y-m-d')) ?>" required>
+                    </label>
+                    
+                    <label for="date_fin">Date de fin
+                        <input type="date" name="date_fin" id="date_fin" value="<?= htmlspecialchars($_POST['date_fin'] ?? date('Y-m-d', strtotime('+1 month'))) ?>" required>
                     </label>
                     
                     <button type="submit" name="ajouter">Enregistrer</button>
@@ -124,35 +185,32 @@ $offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
                     <thead>
                         <tr>
                             <th>Titre</th>
-                            <th>Description</th>
-                            <th>Compétences</th>
                             <th>Entreprise</th>
-                            <th>Base de rémunération</th>
-                            <th>Nombre d'étudiants ayant déjà postulé</th>
-                            <th>Dates de l'offre</th>
-                            <th>Action</th>
+                            <th>Lieu</th>
+                            <th>Date publication</th>
+                            <th>Date fin</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="offreTable">
                         <?php foreach ($offres as $offre): ?>
                         <tr>
                             <td><?= htmlspecialchars($offre['titre']) ?></td>
-                            <td><?= htmlspecialchars($offre['descriptions']) ?></td>
-                            <td><?= htmlspecialchars($offre['competences']) ?></td>
-                            <td><?= htmlspecialchars($offre['entreprise']) ?></td>
-                            <td><?= htmlspecialchars($offre['baserenumeration']) ?></td>
-                            <td><?= htmlspecialchars($offre['nbetudiants']) ?></td>
-                            <td><?= htmlspecialchars($offre['dateoffre']) ?></td>
+                            <td><?= htmlspecialchars($offre['entreprise_nom']) ?></td>
+                            <td><?= htmlspecialchars($offre['lieu']) ?></td>
+                            <td><?= date('d/m/Y', strtotime($offre['date_publication'])) ?></td>
+                            <td><?= date('d/m/Y', strtotime($offre['date_fin'])) ?></td>
                             <td>
                                 <button class="edit-btn" onclick="editOffre(
                                     '<?= $offre['id'] ?>',
                                     '<?= addslashes($offre['titre']) ?>',
-                                    '<?= addslashes($offre['descriptions']) ?>',
-                                    '<?= addslashes($offre['competences']) ?>',
-                                    '<?= addslashes($offre['entreprise']) ?>'
-                                    '<?= addslashes($offre['baserenumeration']) ?>',
-                                    '<?= addslashes($offre['nbetudiants']) ?>',
-                                    '<?= addslashes($offre['dateoffre']) ?>',
+                                    '<?= addslashes($offre['description']) ?>',
+                                    '<?= addslashes($offre['competences_requises']) ?>',
+                                    '<?= $offre['entreprise_id'] ?>',
+                                    '<?= addslashes($offre['lieu']) ?>',
+                                    '<?= addslashes($offre['base_remuneration']) ?>',
+                                    '<?= date('Y-m-d', strtotime($offre['date_publication'])) ?>',
+                                    '<?= date('Y-m-d', strtotime($offre['date_fin'])) ?>'
                                 )">Modifier</button>
                                 <a href="?delete=<?= $offre['id'] ?>" onclick="return confirm('Supprimer cette offre de stage?')" class="delete-btn">Supprimer</a>
                             </td>
@@ -180,18 +238,18 @@ $offres = $pdo->query("SELECT * FROM offresstages")->fetchAll(PDO::FETCH_ASSOC);
             }
         }
 
-        function editOffre(id, titre, descriptions, competences, entreprise, baserenumeration, nbetudiants, dateoffre) {
+        function editOffre(id, titre, description, competences, entreprise_id, entreprise_nom, lieu, base_remuneration, date_publication, date_fin) {
             document.getElementById('editId').value = id;
             document.getElementById('titre').value = titre;
-            document.getElementById('descriptions').value = descriptions;
+            document.getElementById('description').value = description;
             document.getElementById('competences').value = competences;
-            document.getElementById('entreprise').value = entreprise;
-            document.getElementById('baserenumeration').value = baserenumeration;
-            document.getElementById('nbetudiants').value = nbetudiants;
-            document.getElementById('dateoffre').value = dateoffre;
+            document.getElementById('nom_entreprise').value = entreprise_nom;
+            document.getElementById('lieu').value = lieu;
+            document.getElementById('base_remuneration').value = base_remuneration;
+            document.getElementById('date_publication').value = date_publication;
+            document.getElementById('date_fin').value = date_fin;
             window.scrollTo(0, 0);
         }
-
         function searchOffre() {
             const filter = document.getElementById('search').value.toLowerCase();
             document.querySelectorAll('#offreTable tr').forEach(row => {

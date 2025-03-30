@@ -1,193 +1,266 @@
+<?php
+// Connexion à la base de données
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "gestion";
+
+try {
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Erreur de connexion : " . $e->getMessage());
+}
+
+// Récupérer toutes les candidatures avec les détails
+$candidatures = $pdo->query("
+    SELECT c.*, 
+           e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+           o.titre AS offre_titre, o.lieu AS offre_lieu,
+           ent.nom AS entreprise_nom
+    FROM candidatures c
+    LEFT JOIN etudiants e ON c.etudiant_id = e.id
+    LEFT JOIN offres_stage o ON c.offre_id = o.id
+    LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
+    ORDER BY c.date_candidature DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Récupérer les offres de stage disponibles (non expirées)
+$offres = $pdo->query("
+    SELECT o.*, e.nom AS entreprise_nom 
+    FROM offres_stage o
+    LEFT JOIN entreprises e ON o.entreprise_id = e.id
+    WHERE o.date_fin >= CURDATE()
+    ORDER BY o.date_publication DESC
+")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des Candidatures</title>
-    <link rel="stylesheet" href="assets/style_base.css">
+    <link href="style/style_entreprises.css" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
         }
+        
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .offers {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 2rem;
+        }
+        
+        .offer {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s;
+            border: 1px solid #ddd;
+        }
+        
+        .offer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .postuler {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .postuler:hover {
+            background-color: #2980b9;
+        }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-top: 1rem;
+            border: 1px solid #ddd;
         }
-        main {
-            margin-left: 30px;
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ccc;
+        
+        th {
+            background-color: #34495e;
+            color: white;
+            padding: 1rem;
             text-align: left;
         }
-        th {
-            background-color: #f2f2f2;
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
         }
-        form {
-            max-width: 600px;
+        
+        tr:hover {
+            background-color: #f8f9fa;
         }
-        label {
-            display: block;
-            margin-top: 10px;
+        
+        .statut-en-attente {
+            color: #f39c12;
+            font-weight: bold;
         }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
+        
+        .statut-accepte {
+            color: #2ecc71;
+            font-weight: bold;
         }
-        input[type="submit"] {
-            width: auto;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-        input[type="submit"]:hover {
-            background-color: #45a049;
-        }
-        @media (max-width: 600px) {
-            table, thead, tbody, th, td, tr {
-                display: block;
-            }
-            th, td {
-                padding: 10px;
-                text-align: right;
-            }
+        
+        .statut-refuse {
+            color: #e74c3c;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div>
-        <h1 class="center">Gestion des Candidatures</h1>
-    </div>
-
-    <!-- Liste des candidatures -->
-    <h3>Liste des Candidatures</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Entreprise</th>
-                <th>Offre</th>
-                <th>Date de candidature</th>
-                <th>Statut</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-                $file = 'candidatures.json';
-                if (file_exists($file)) {
-                    $jsonData = file_get_contents($file);
-                    $candidatures = json_decode($jsonData, true);
-
-                    foreach ($candidatures as $candidature) {
-                        echo "<tr>";
-                        echo "<td>" . htmlspecialchars($candidature['entreprise']) . "</td>";
-                        echo "<td>" . htmlspecialchars($candidature['offre']) . "</td>";
-                        echo "<td>" . htmlspecialchars($candidature['date']) . "</td>";
-                        echo "<td>" . htmlspecialchars($candidature['statut']) . "</td>";
-                        echo "</tr>";
-                    }
-                } else {
-                    echo "<tr><td colspan='4'>Aucune candidature pour le moment.</td></tr>";
-                }
-            ?>
-        </tbody>
-    </table>
-
-    <!-- Formulaire de candidature -->
+    <header>
+        <nav class="navbar">
+            <center>
+                <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
+            </center>
+            <div class="user-menu" id="userMenu">
+                <div class="user-info" onclick="toggleMenu()">
+                    <div class="user-avatar">YR</div>
+                    <span class="user-name">Yohann Romarick</span>
+                    <span class="dropdown-icon">▼</span>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" class="dropdown-item">Mon profil</a>
+                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <div class="divider"></div>
+                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                </div>
+            </div>
+        </nav>
+        <nav>
+            <a href="">Accueil</a> |
+            <a href="entreprise.php">Gestion des entreprises</a> |
+            <a href="stage.php">Gestion des offres de stage</a> |
+            <a href="pilote.php">Gestion des pilotes</a> |
+            <a href="etudiant.php">Gestion des étudiants</a> |
+            <strong>Gestion des candidatures</strong>
+        </nav>
+    </header>
 
     <main>
-        <div>
-            <h1 class="center">Postuler à nos offres disponibles</h1>
-            <h2>Voici vos offres !</h2>
-        </div>
-        <div class="offers">
-            <div class="offer clickable">
-                <h1 class="center">Stage - Administrateur Système et Réseau H/F</h1>
-                <h2 class="small center">IBM | Pornichet - 44 | Publiée le 13/01/2025</h2>
-                <h1 class="center">
-                    <a class="postuler" href="offres-stage-postuler.php?title=Stage%20-%20Administrateur%20Système%20et%20Réseau%20H/F&company=IBM&location=Pornichet%20-%2044&date=13/01/2025">POSTULER</a>
-                </h1>
-            </div>
-            <div class="offer clickable">
-                <h1 class="center">Stage - Ingénieur Qualité H/F</h1>
-                <h2 class="small center">ABC | Pornichet - 44 | Publiée le 20/01/2025</h2>
-                <h1 class="center">
-                    <a class="postuler" href="offres-stage-postuler.php?title=Stage%20-%20Ingénieur%20Qualité%20H/F&company=ABC&location=Pornichet%20-%2044&date=20/01/2025">POSTULER</a>
-                </h1>
-            </div>
-            <div class="offer clickable">
-                <h1 class="center">Stage - Développement WEB H/F</h1>
-                <h2 class="small center">IBM | Nantes - 44 | Publiée le 23/02/2025</h2>
-                <h1 class="center">
-                    <a class="postuler" href="offres-stage-postuler.php?title=Stage%20-%20Développement%20WEB%20H/F&company=IBM&location=Nantes%20-%2044&date=23/02/2025">POSTULER</a>
-                </h1>
-            </div>
-            <div class="offer clickable">
-                <h1 class="center">Stage - Systèmes Embarqués H/F</h1>
-                <h2 class="small center">IBM | Pornichet - 44 | Publiée le 10/02/2025</h2>
-                <h1 class="center">
-                    <a class="postuler" href="offres-stage-postuler.php?title=Stage%20-%20Systèmes%20Embarqués%20H/F&company=IBM&location=Pornichet%20-%2044&date=10/02/2025">POSTULER</a>
-                </h1>
-            </div>
-        </div>
+        <section>
+            <article>
+                <h2>Liste des Candidatures</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Étudiant</th>
+                            <th>Entreprise</th>
+                            <th>Offre</th>
+                            <th>Lieu</th>
+                            <th>Date candidature</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($candidatures)): ?>
+                            <tr>
+                                <td colspan="7">Aucune candidature trouvée</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($candidatures as $candidature): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($candidature['etudiant_prenom'] . ' ' . $candidature['etudiant_nom']) ?></td>
+                                    <td><?= htmlspecialchars($candidature['entreprise_nom']) ?></td>
+                                    <td><?= htmlspecialchars($candidature['offre_titre']) ?></td>
+                                    <td><?= htmlspecialchars($candidature['offre_lieu']) ?></td>
+                                    <td><?= date('d/m/Y', strtotime($candidature['date_candidature'])) ?></td>
+                                    <td>
+                                        <?php 
+                                        $class = '';
+                                        if ($candidature['statut'] === 'Acceptée') $class = 'statut-accepte';
+                                        elseif ($candidature['statut'] === 'Refusée') $class = 'statut-refuse';
+                                        else $class = 'statut-en-attente';
+                                        ?>
+                                        <span class="<?= $class ?>"><?= htmlspecialchars($candidature['statut']) ?></span>
+                                    </td>
+                                    <td>
+                                        <a href="candidature_details.php?id=<?= $candidature['id'] ?>" class="edit-btn">Voir</a>
+                                        <a href="?changer_statut=<?= $candidature['id'] ?>" class="edit-btn">Modifier</a>
+                                        <a href="?supprimer=<?= $candidature['id'] ?>" class="delete-btn">Supprimer</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </article>
+        </section>
+
+        <section>
+            <article>
+                <h2>Offres de stage disponibles</h2>
+                <div class="offers">
+                    <?php if (empty($offres)): ?>
+                        <p>Aucune offre de stage disponible actuellement.</p>
+                    <?php else: ?>
+                        <?php foreach ($offres as $offre): ?>
+                            <div class="offer">
+                                <h3><?= htmlspecialchars($offre['titre']) ?></h3>
+                                <p class="small">
+                                    <?= htmlspecialchars($offre['entreprise_nom']) ?> | 
+                                    <?= htmlspecialchars($offre['lieu']) ?> | 
+                                    Publiée le <?= date('d/m/Y', strtotime($offre['date_publication'])) ?>
+                                </p>
+                                <p><?= htmlspecialchars(substr($offre['description'], 0, 100)) ?>...</p>
+                                <p><strong>Compétences requises:</strong> <?= htmlspecialchars(substr($offre['competences_requises'], 0, 50)) ?>...</p>
+                                <p><strong>Date limite:</strong> <?= date('d/m/Y', strtotime($offre['date_fin'])) ?></p>
+                                <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
+        </section>
     </main>
-<!--     <form id="candidatureForm" enctype="multipart/form-data">
-        <label for="entreprise">Entreprise :</label>
-        <input type="text" id="entreprise" name="entreprise" required>
 
-        <label for="offre">Offre :</label>
-        <input type="text" id="offre" name="offre" required>
-
-        <label for="date">Date :</label>
-        <input type="date" id="date" name="date" required>
-
-        <label for="cv">CV :</label>
-        <input type="file" id="cv" name="cv" accept=".pdf,.doc,.docx" required>
-
-        <label for="motivation">Lettre de motivation :</label>
-        <textarea id="motivation" name="motivation" rows="5" required></textarea>
-
-        <input type="submit" value="Postuler">
-    </form> -->
+    <footer></footer>
 
     <script>
-        const form = document.getElementById('candidatureForm');
+        function toggleMenu() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Empêche le rechargement
-
-            // Vérification des champs
-            const entreprise = document.getElementById('entreprise').value.trim();
-            const offre = document.getElementById('offre').value.trim();
-            const date = document.getElementById('date').value;
-            const cv = document.getElementById('cv').files[0];
-            const motivation = document.getElementById('motivation').value.trim();
-
-            if (!entreprise || !offre || !date || !cv || !motivation) {
-                alert("Veuillez remplir tous les champs !");
-                return;
+        window.onclick = function(e) {
+            if (!e.target.matches('.user-info *')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
             }
+        }
 
-            alert("Votre candidature a bien été envoyée !");
-            
-            // Optionnel : Envoyer les données au serveur via fetch() ou AJAX
-            // Exemple d'affichage en console
-            console.log({
-                entreprise,
-                offre,
-                date,
-                cvName: cv.name,
-                motivation
-            });
-
-            form.reset(); // Réinitialisation du formulaire
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Déconnexion ?')) {
+                window.location.href = 'authentification.php';
+            }
         });
     </script>
-
 </body>
 </html>
