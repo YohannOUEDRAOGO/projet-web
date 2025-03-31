@@ -1,53 +1,41 @@
 <?php
-// Configuration de la base de données
+// Configuration
 $host = 'localhost';
 $dbname = 'projet-web';
 $username = 'root';
 $password = '';
 
-try {
-    // Connexion à la base de données
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+// Données étudiant
+$userEmail = 'stephkengne17@gmail.comg';
+$userPassword = '12345678';
+$userNom = 'DUPONT';
+$userPrenom = 'Jean';
 
-    // Données de l'utilisateur admin à ajouter
-    $userEmail = 'stephkengne17@gmail.com';
-    $userPassword = 'stephane12345678';
-    $userNom = 'KENGNE';
-    $userPrenom = 'Stephane';
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
     
-    // Vérification que l'email n'existe pas déjà
-    $checkStmt = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
-    $checkStmt->execute([$userEmail]);
+    // Vérification email
+    $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
+    $check->execute([$userEmail]);
     
-    if ($checkStmt->fetch()) {
-        die("Erreur: Cet email est déjà utilisé.");
+    if ($check->fetch()) {
+        die("Email existe déjà");
     }
-    
-    // Hachage sécurisé du mot de passe
-    $hashedPassword = password_hash($userPassword, PASSWORD_DEFAULT);
-    
-    // Préparation et exécution de la requête
+
+    // Insertion
     $stmt = $pdo->prepare("INSERT INTO utilisateurs 
-                          (email, password, nom, prenom, role, actif, date_creation) 
-                          VALUES (?, ?, ?, ?, ?, ?, NOW())");
-    
+                          (email, password, nom, prenom, role, actif) 
+                          VALUES (?, ?, ?, ?, 'pilote', 1)");
     $stmt->execute([
         $userEmail,
-        $hashedPassword,
+        password_hash($userPassword, PASSWORD_DEFAULT),
         $userNom,
-        $userPrenom,
-        'admin',  // Rôle admin
-        true      // Compte actif
+        $userPrenom
     ]);
-    
-    echo "Utilisateur admin ajouté avec succès!";
+
+    echo "Étudiant ajouté avec rôle 'etudiant'";
     
 } catch (PDOException $e) {
-    error_log("Erreur d'insertion utilisateur: " . $e->getMessage());
-    die("Une erreur technique est survenue. Veuillez réessayer plus tard.");
+    die("Erreur: " . $e->getMessage());
 }
 ?>

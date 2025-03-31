@@ -1,11 +1,19 @@
 <?php
 require_once 'check_session.php';
 verifySession();
-// Vérification de la connexion
 if (!isset($_SESSION['user'])) {
     header('Location: authentification.php');
     exit();
 }
+
+$currentUser = $_SESSION['user'];
+$role = $currentUser['role'];
+
+// Vérification des droits selon la matrice CDC V4
+$canCreateCompany = in_array($role, ['admin', 'pilote']);
+$canEditCompany = in_array($role, ['admin', 'pilote']);
+$canDeleteCompany = in_array($role, ['admin', 'pilote']);
+$canRateCompany = true; // Tous peuvent évaluer
 
 $servername = "localhost";
 $username = "root";
@@ -19,10 +27,12 @@ try {
     die("Erreur de connexion : " . $e->getMessage());
 }
 
-// Récupération des informations de l'utilisateur connecté
-$currentUser = $_SESSION['user'];
-
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    // Vérification des droits avant traitement
+    if ((!empty($_POST['id']) && !$canEditCompany) || (empty($_POST['id']) && !$canCreateCompany)) {
+        die("Action non autorisée");
+    }
+
     $nom = htmlspecialchars($_POST['nom']);
     $description = htmlspecialchars($_POST['description']);
     $url = filter_var($_POST['url'], FILTER_SANITIZE_URL);
@@ -31,11 +41,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
 
     if (!empty($nom) && !empty($description) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (!empty($_POST['id'])) {
-            // Mise à jour
             $stmt = $pdo->prepare("UPDATE entreprises SET nom=?, description=?, url=?, email=?, telephone=? WHERE id=?");
             $stmt->execute([$nom, $description, $url, $email, $telephone, $_POST['id']]);
         } else {
-            // Ajout
             $stmt = $pdo->prepare("INSERT INTO entreprises (nom, description, url, email, telephone) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$nom, $description, $url, $email, $telephone]);
         }
@@ -44,15 +52,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     }
 }
 
-// Suppression
 if (isset($_GET['delete'])) {
+    if (!$canDeleteCompany) {
+        die("Action non autorisée");
+    }
     $stmt = $pdo->prepare("DELETE FROM entreprises WHERE id=?");
     $stmt->execute([$_GET['delete']]);
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
 
-// Récupération
 $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -69,6 +78,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
         .rating > label:hover,
         .rating > label:hover ~ label,
         .rating > input:checked ~ label { color: gold; }
+        .disabled-form { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -78,33 +88,36 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                 <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
             </center>
             <div class="user-menu" id="userMenu">
-    <div class="user-info" onclick="toggleMenu()">
-        <div class="user-avatar">
-            <?php 
-                echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
-            ?>
-        </div>
-        <span class="user-name">
-            <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
-        </span>
-        <span class="dropdown-icon">▼</span>
-    </div>
-    <div class="dropdown-menu" id="dropdownMenu">
-        <a href="profil.php" class="dropdown-item">Mon profil</a>
-        <?php if ($currentUser['role'] === 'etudiant'): ?>
-            <a href="wishlist.php" class="dropdown-item">Wish-list</a>
-        <?php endif; ?>
-        <div class="divider"></div>
-        <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
-    </div>
-</div>
+                <div class="user-info" onclick="toggleMenu()">
+                    <div class="user-avatar">
+                        <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
+                    </div>
+                    <span class="user-name">
+                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                        <small>(<?php echo htmlspecialchars($role); ?>)</small>
+                    </span>
+                    <span class="dropdown-icon">▼</span>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="profil.php" class="dropdown-item">Mon profil</a>
+                    <?php if ($role === 'etudiant'): ?>
+                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                    <?php endif; ?>
+                    <div class="divider"></div>
+                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                </div>
+            </div>
         </nav>
         <nav>
             <a href="candidature.php">Accueil</a> |
             <strong>Gestion des entreprises</strong>|
             <a href="stage.php">Gestion des offres de stage</a> |
-            <a href="pilote.php">Gestion des pilotes</a> |
-            <a href="etudiant.php">Gestion des étudiants</a> |
+            <?php if ($role === 'admin'): ?>
+                <a href="pilote.php">Gestion des pilotes</a> |
+            <?php endif; ?>
+            <?php if (in_array($role, ['admin', 'pilote'])): ?>
+                <a href="etudiant.php">Gestion des étudiants</a> |
+            <?php endif; ?>
             <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
@@ -115,8 +128,9 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                 <h2>Rechercher une entreprise</h2>
                 <input type="text" placeholder="Nom, Description ou Email" id="search" onkeyup="searchCompany()" required>
                 
+                <?php if ($canCreateCompany || $canEditCompany): ?>
                 <h2>Ajouter/Modifier une entreprise</h2>
-                <form method="POST" id="companyForm">
+                <form method="POST" id="companyForm" <?php echo (!$canCreateCompany && !$canEditCompany) ? 'class="disabled-form"' : ''; ?>>
                     <input type="hidden" id="editId" name="id">
                     
                     <label for="nom">Nom
@@ -139,8 +153,9 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                         <input type="text" name="telephone" id="telephone" required>
                     </label>
                     
-                    <button type="submit" name="ajouter">Enregistrer</button>
+                    <button type="submit" name="ajouter" <?php echo (!$canCreateCompany && !$canEditCompany) ? 'disabled' : ''; ?>>Enregistrer</button>
                 </form>
+                <?php endif; ?>
                 
                 <h2>Liste des entreprises</h2>
                 <table>
@@ -162,6 +177,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                             <td><?= htmlspecialchars($entreprise['email']) ?></td>
                             <td><?= htmlspecialchars($entreprise['telephone']) ?></td>
                             <td>
+                                <?php if ($canEditCompany): ?>
                                 <button class="edit-btn" onclick="editCompany(
                                     '<?= $entreprise['id'] ?>',
                                     '<?= addslashes($entreprise['nom']) ?>',
@@ -170,15 +186,20 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                                     '<?= addslashes($entreprise['email']) ?>',
                                     '<?= addslashes($entreprise['telephone']) ?>'
                                 )">Modifier</button>
+                                <?php endif; ?>
+                                <?php if ($canDeleteCompany): ?>
                                 <a href="?delete=<?= $entreprise['id'] ?>" onclick="return confirm('Supprimer cette entreprise?')" class="delete-btn">Supprimer</a>
+                                <?php endif; ?>
                             </td>
                             <td>
+                                <?php if ($canRateCompany): ?>
                                 <div class="rating">
                                     <?php for ($i = 5; $i >= 1; $i--): ?>
                                     <input type="radio" id="star<?= $i ?>_<?= $entreprise['id'] ?>" name="rating_<?= $entreprise['id'] ?>" value="<?= $i ?>" <?= ($i == 3) ? 'checked' : '' ?>>
                                     <label for="star<?= $i ?>_<?= $entreprise['id'] ?>" title="<?= $i ?> étoiles">★</label>
                                     <?php endfor; ?>
                                 </div>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

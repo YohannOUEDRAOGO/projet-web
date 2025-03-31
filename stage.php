@@ -1,11 +1,19 @@
 <?php
 require_once 'check_session.php';
 verifySession();
-// Vérification de la connexion
 if (!isset($_SESSION['user'])) {
     header('Location: authentification.php');
     exit();
 }
+
+$currentUser = $_SESSION['user'];
+$role = $currentUser['role'];
+
+// Vérification des droits selon la matrice CDC V4
+$canCreateOffer = in_array($role, ['admin', 'pilote']);
+$canEditOffer = in_array($role, ['admin', 'pilote']);
+$canDeleteOffer = in_array($role, ['admin', 'pilote']);
+$canViewStats = true; // Tous peuvent voir les stats
 
 $servername = "localhost";
 $username = "root";
@@ -19,13 +27,15 @@ try {
     die("Erreur de connexion : " . $e->getMessage());
 }
 
-// Récupération des informations de l'utilisateur connecté
-$currentUser = $_SESSION['user'];
-
 // Récupérer la liste des entreprises pour le select
 $entreprises = $pdo->query("SELECT id, nom FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
+    // Vérification des droits avant traitement
+    if ((!empty($_POST['id']) && !$canEditOffer) || (empty($_POST['id']) && !$canCreateOffer)) {
+        die("Action non autorisée");
+    }
+
     // Récupération et validation des données
     $titre = htmlspecialchars($_POST['titre'] ?? '');
     $description = htmlspecialchars($_POST['description'] ?? '');
@@ -62,11 +72,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
             }
 
             if (!empty($_POST['id'])) {
-                // Mise à jour
                 $stmt = $pdo->prepare("UPDATE offres_stage SET titre=?, description=?, competences_requises=?, entreprise_id=?, lieu=?, base_remuneration=?, date_publication=?, date_fin=? WHERE id=?");
                 $stmt->execute([$titre, $description, $competences, $entreprise_id, $lieu, $base_remuneration, $date_publication, $date_fin, $_POST['id']]);
             } else {
-                // Ajout
                 $stmt = $pdo->prepare("INSERT INTO offres_stage (titre, description, competences_requises, entreprise_id, lieu, base_remuneration, date_publication, date_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$titre, $description, $competences, $entreprise_id, $lieu, $base_remuneration, $date_publication, $date_fin]);
             }
@@ -77,7 +85,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
         }
     }
     
-    // Afficher les erreurs si elles existent
     if (!empty($errors)) {
         echo '<div class="error-message">';
         echo '<p>Des erreurs ont été détectées :</p>';
@@ -90,15 +97,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     }
 }
 
-// Suppression
 if (isset($_GET['delete'])) {
+    if (!$canDeleteOffer) {
+        die("Action non autorisée");
+    }
     $stmt = $pdo->prepare("DELETE FROM offres_stage WHERE id=?");
     $stmt->execute([$_GET['delete']]);
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
 
-// Récupération des offres avec le nom de l'entreprise
 $offres = $pdo->query("
     SELECT o.*, e.nom AS entreprise_nom 
     FROM offres_stage o 
@@ -113,6 +121,10 @@ $offres = $pdo->query("
     <meta charset="utf-8">
     <title>Gestion des offres de stage</title>
     <link href="style/style_entreprises.css" rel="stylesheet">
+    <style>
+        .disabled-form { opacity: 0.6; pointer-events: none; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
     <header>
@@ -123,18 +135,17 @@ $offres = $pdo->query("
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
                     <div class="user-avatar">
-                        <?php 
-                            echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
-                        ?>
+                        <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
                     </div>
                     <span class="user-name">
                         <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                        <small>(<?php echo htmlspecialchars($role); ?>)</small>
                     </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <a href="profil.php" class="dropdown-item">Mon profil</a>
-                    <?php if ($currentUser['role'] === 'etudiant'): ?>
+                    <?php if ($role === 'etudiant'): ?>
                         <a href="wishlist.php" class="dropdown-item">Wish-list</a>
                     <?php endif; ?>
                     <div class="divider"></div>
@@ -146,8 +157,12 @@ $offres = $pdo->query("
             <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
             <strong>Gestion des offres de stage</strong> |
-            <a href="pilote.php">Gestion des pilotes</a> |
-            <a href="etudiant.php">Gestion des étudiants</a> |
+            <?php if ($role === 'admin'): ?>
+                <a href="pilote.php">Gestion des pilotes</a> |
+            <?php endif; ?>
+            <?php if (in_array($role, ['admin', 'pilote'])): ?>
+                <a href="etudiant.php">Gestion des étudiants</a> |
+            <?php endif; ?>
             <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
@@ -158,8 +173,9 @@ $offres = $pdo->query("
                 <h2>Rechercher une offre de stage</h2>
                 <input type="text" placeholder="Titre, compétences, lieu..." id="search" onkeyup="searchOffre()" required>
                 
+                <?php if ($canCreateOffer || $canEditOffer): ?>
                 <h2>Ajouter/Modifier une offre de stage</h2>
-                <form method="POST" id="offreForm">
+                <form method="POST" id="offreForm" <?php echo (!$canCreateOffer && !$canEditOffer) ? 'class="disabled-form"' : ''; ?>>
                     <input type="hidden" id="editId" name="id" value="<?= $_POST['id'] ?? '' ?>">
                     
                     <label for="titre">Titre
@@ -194,8 +210,9 @@ $offres = $pdo->query("
                         <input type="date" name="date_fin" id="date_fin" value="<?= htmlspecialchars($_POST['date_fin'] ?? date('Y-m-d', strtotime('+1 month'))) ?>" required>
                     </label>
                     
-                    <button type="submit" name="ajouter">Enregistrer</button>
+                    <button type="submit" name="ajouter" <?php echo (!$canCreateOffer && !$canEditOffer) ? 'disabled' : ''; ?>>Enregistrer</button>
                 </form>
+                <?php endif; ?>
                 
                 <h2>Liste des offres de stage</h2>
                 <table>
@@ -218,6 +235,7 @@ $offres = $pdo->query("
                             <td><?= date('d/m/Y', strtotime($offre['date_publication'])) ?></td>
                             <td><?= date('d/m/Y', strtotime($offre['date_fin'])) ?></td>
                             <td>
+                                <?php if ($canEditOffer): ?>
                                 <button class="edit-btn" onclick="editOffre(
                                     '<?= $offre['id'] ?>',
                                     '<?= addslashes($offre['titre']) ?>',
@@ -229,7 +247,10 @@ $offres = $pdo->query("
                                     '<?= date('Y-m-d', strtotime($offre['date_publication'])) ?>',
                                     '<?= date('Y-m-d', strtotime($offre['date_fin'])) ?>'
                                 )">Modifier</button>
+                                <?php endif; ?>
+                                <?php if ($canDeleteOffer): ?>
                                 <a href="?delete=<?= $offre['id'] ?>" onclick="return confirm('Supprimer cette offre de stage?')" class="delete-btn">Supprimer</a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
