@@ -1,17 +1,57 @@
 <?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+require 'vendor/autoload.php';
+
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "projet-web";
-$dbname = "projet-web";
- 
+$dbname = "gestion";
+
+function genererMotDePasseUnique($pdo) {
+    $majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    $minuscules = 'abcdefghijklmnopqrstuvwxyz';
+    $chiffres = '0123456789';
+    $speciaux = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    
+    $tentatives = 0;
+    $maxTentatives = 100;
+    
+    do {
+        $motDePasse = '';
+        $motDePasse .= $majuscules[rand(0, strlen($majuscules) - 1)];
+        $motDePasse .= $minuscules[rand(0, strlen($minuscules) - 1)];
+        $motDePasse .= $chiffres[rand(0, strlen($chiffres) - 1)];
+        $motDePasse .= $speciaux[rand(0, strlen($speciaux) - 1)];
+        
+        $tousCaracteres = $majuscules . $minuscules . $chiffres . $speciaux;
+        while (strlen($motDePasse) < 12) {
+            $motDePasse .= $tousCaracteres[rand(0, strlen($tousCaracteres) - 1)];
+        }
+        
+        $motDePasse = str_shuffle($motDePasse);
+        $motDePasseHash = password_hash($motDePasse, PASSWORD_BCRYPT);
+        
+        $stmt = $pdo->prepare("SELECT id FROM pilotes WHERE mot_de_passe = ?");
+        $stmt->execute([$motDePasseHash]);
+        $existe = $stmt->rowCount() > 0;
+        
+        $tentatives++;
+        if ($tentatives >= $maxTentatives) {
+            throw new Exception("Impossible de générer un mot de passe unique après $maxTentatives tentatives");
+        }
+    } while ($existe);
+    
+    return ['plain' => $motDePasse, 'hash' => $motDePasseHash];
+}
+
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Erreur de connexion : " . $e->getMessage());
 }
- 
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $nom = htmlspecialchars($_POST['nom']);
     $prenom = htmlspecialchars($_POST['prenom']);
@@ -23,9 +63,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
             $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=?, email=? WHERE id=?");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
-            // Ajout
-            $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email) VALUES (?, ?,?)");
-            $stmt->execute([$nom, $prenom, $email]);
+            // Vérifier si l'email existe déjà
+            $check = $pdo->prepare("SELECT id FROM pilotes WHERE email = ?");
+            $check->execute([$email]);
+            
+            if ($check->rowCount() > 0) {
+                echo "<script>alert('Cet email est déjà utilisé par un autre pilote');</script>";
+            } else {
+                try {
+                    // Génération d'un mot de passe unique
+                    $passwordData = genererMotDePasseUnique($pdo);
+                    
+                    // Ajout dans la base de données
+                    $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$nom, $prenom, $email, $passwordData['hash']]);
+                    
+                    // Envoi d'email avec PHPMailer
+                    $mail = new PHPMailer(true);
+                    try {
+                        $mail->isSMTP();
+                        $mail->Host = 'smtp.gmail.com';
+                        $mail->SMTPAuth = true;
+                        $mail->Username = 'cryptosteph17@gmail.com'; // Remplacez par votre email
+                        $mail->Password = 'zgybnrnzconvsjvd'; // Remplacez par votre mot de passe
+                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                        $mail->Port = 587;
+                
+                        $mail->setFrom('no-reply@lebonplan.com', 'Le Bon Plan');
+                        $mail->addAddress($email);
+                        $mail->Subject = 'Création de compte pilote';
+                        $mail->Body = "Bonjour $prenom $nom,\n\nVotre compte pilote a bien été créé.\nIdentifiants:\nEmail: $email\nMot de Passe: {$passwordData['plain']}\n\nCordialement,\nL'équipe pédagogique.";
+                
+                        $mail->send();
+                    } catch (Exception $e) {
+                        error_log("Erreur d'envoi d'email: " . $e->getMessage());
+                    }
+                } catch (Exception $e) {
+                    die("Erreur: " . $e->getMessage());
+                }
+            }
         }
         header("Location: ".$_SERVER['PHP_SELF']);
         exit;
@@ -59,33 +135,25 @@ $pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
             </center>
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">
-                        <?php 
-                            echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); 
-                        ?>
-                    </div>
-                    <span class="user-name">
-                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
-                    </span>
+                    <div class="user-avatar">YR</div>
+                    <span class="user-name">Yohann Romarick</span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="profil.php" class="dropdown-item">Mon profil</a>
-                    <?php if ($currentUser['role'] === 'etudiant'): ?>
-                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
-                    <?php endif; ?>
+                    <a href="#" class="dropdown-item">Mon profil</a>
+                    <a href="#" class="dropdown-item">Wish-list</a>
                     <div class="divider"></div>
-                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
                 </div>
             </div>
         </nav>
         <nav>
-            <a href="candidature.php">Accueil</a> |
+            <a href="">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.php">Gestion des offres de stage</a> |
-            <strong>Gestion des pilotes</strong> |
+            <a href="stage.html">Gestion des offres de stage</a> |
+            <strong>Gestion des pilotes |</strong>
             <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="candidature.php">Gestion des candidatures</a>
+            <a href="">Gestion des candidatures</a>
         </nav>
     </header>
 
