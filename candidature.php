@@ -5,7 +5,6 @@ if (!isset($_SESSION['user'])) {
     header('Location: authentification.php');
     exit();
 }
-
 $currentUser = $_SESSION['user'];
 $role = $currentUser['role'];
 
@@ -14,7 +13,6 @@ $canCreateCompany = in_array($role, ['admin', 'pilote']);
 $canEditCompany = in_array($role, ['admin', 'pilote']);
 $canDeleteCompany = in_array($role, ['admin', 'pilote']);
 $canRateCompany = true; // Tous peuvent évaluer
-
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -27,49 +25,83 @@ try {
     die("Erreur de connexion : " . $e->getMessage());
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
-    // Vérification des droits avant traitement
-    if ((!empty($_POST['id']) && !$canEditCompany) || (empty($_POST['id']) && !$canCreateCompany)) {
-        die("Action non autorisée");
-    }
+// Récupération des informations de l'utilisateur connecté
+$currentUser = $_SESSION['user'];
+$userRole = $currentUser['role'];
 
-    $nom = htmlspecialchars($_POST['nom']);
-    $description = htmlspecialchars($_POST['description']);
-    $url = filter_var($_POST['url'], FILTER_SANITIZE_URL);
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $telephone = htmlspecialchars($_POST['telephone']);
-
-    if (!empty($nom) && !empty($description) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        if (!empty($_POST['id'])) {
-            $stmt = $pdo->prepare("UPDATE entreprises SET nom=?, description=?, url=?, email=?, telephone=? WHERE id=?");
-            $stmt->execute([$nom, $description, $url, $email, $telephone, $_POST['id']]);
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO entreprises (nom, description, url, email, telephone) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$nom, $description, $url, $email, $telephone]);
-        }
-        header("Location: ".$_SERVER['PHP_SELF']);
-        exit;
-    }
+// Récupération des données selon le rôle
+if (in_array($userRole, ['admin', 'pilote'])) {
+    // Admin et pilotes voient toutes les candidatures
+    $candidatures = $pdo->query("
+        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+               o.titre AS offre_titre, o.lieu AS offre_lieu,
+               ent.nom AS entreprise_nom
+        FROM candidatures c
+        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN offres_stage o ON c.offre_id = o.id
+        LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
+        ORDER BY c.date_candidature DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} elseif ($userRole === 'etudiant') {
+    // Étudiants ne voient que leurs propres candidatures
+    $candidatures = $pdo->prepare("
+        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+               o.titre AS offre_titre, o.lieu AS offre_lieu,
+               ent.nom AS entreprise_nom
+        FROM candidatures c
+        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN offres_stage o ON c.offre_id = o.id
+        LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
+        WHERE c.etudiant_id = ?
+        ORDER BY c.date_candidature DESC
+    ");
+    $candidatures->execute([$currentUser['id']]);
+    $candidatures = $candidatures->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    // Entreprises voient les candidatures pour leurs offres
+    $candidatures = $pdo->prepare("
+        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+               o.titre AS offre_titre, o.lieu AS offre_lieu,
+               ent.nom AS entreprise_nom
+        FROM candidatures c
+        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN offres_stage o ON c.offre_id = o.id
+        LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
+        WHERE o.entreprise_id = ?
+        ORDER BY c.date_candidature DESC
+    ");
+    $candidatures->execute([$currentUser['id']]);
+    $candidatures = $candidatures->fetchAll(PDO::FETCH_ASSOC);
 }
 
-if (isset($_GET['delete'])) {
-    if (!$canDeleteCompany) {
-        die("Action non autorisée");
-    }
-    $stmt = $pdo->prepare("DELETE FROM entreprises WHERE id=?");
-    $stmt->execute([$_GET['delete']]);
-    header("Location: ".$_SERVER['PHP_SELF']);
-    exit;
+// Récupérer les offres de stage disponibles
+if ($userRole === 'entreprise') {
+    $offres = $pdo->prepare("
+        SELECT o.*, e.nom AS entreprise_nom 
+        FROM offres_stage o
+        LEFT JOIN entreprises e ON o.entreprise_id = e.id
+        WHERE o.date_fin >= CURDATE() AND o.entreprise_id = ?
+        ORDER BY o.date_publication DESC
+    ");
+    $offres->execute([$currentUser['id']]);
+    $offres = $offres->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $offres = $pdo->query("
+        SELECT o.*, e.nom AS entreprise_nom 
+        FROM offres_stage o
+        LEFT JOIN entreprises e ON o.entreprise_id = e.id
+        WHERE o.date_fin >= CURDATE()
+        ORDER BY o.date_publication DESC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 }
-
-$entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="utf-8">
-    <title>Gestion des Entreprises</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Candidatures</title>
     <link href="style/style_entreprises.css" rel="stylesheet">
     <style>
         .rating { unicode-bidi: bidi-override; direction: rtl; }
@@ -79,6 +111,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
         .rating > label:hover ~ label,
         .rating > input:checked ~ label { color: gold; }
         .disabled-form { opacity: 0.6; pointer-events: none; }
+        .restricted { opacity: 0.6; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -90,17 +123,17 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
                     <div class="user-avatar">
-                        <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
+                        <?= substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
                     </div>
                     <span class="user-name">
-                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
-                        <small>(<?php echo htmlspecialchars($role); ?>)</small>
+                        <?= htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']) ?>
+                        <small>(<?= htmlspecialchars($userRole) ?>)</small>
                     </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <a href="profil.php" class="dropdown-item">Mon profil</a>
-                    <?php if ($role === 'etudiant'): ?>
+                    <?php if ($userRole === 'etudiant'): ?>
                         <a href="wishlist.php" class="dropdown-item">Wish-list</a>
                     <?php endif; ?>
                     <div class="divider"></div>
@@ -110,106 +143,103 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
         </nav>
         <nav>
             <a href="candidature.php">Accueil</a> |
-            <strong>Gestion des entreprises</strong>|
+            <?php if (in_array($userRole, ['admin', 'pilote', 'entreprise'])): ?>
+                <a href="entreprise.php">Gestion des entreprises</a> |
+            <?php endif; ?>
             <a href="stage.php">Gestion des offres de stage</a> |
-            <?php if ($role === 'admin'): ?>
+            <?php if ($userRole === 'admin'): ?>
                 <a href="pilote.php">Gestion des pilotes</a> |
             <?php endif; ?>
-            <?php if (in_array($role, ['admin', 'pilote'])): ?>
+            <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
-            <a href="candidature.php">Gestion des candidatures</a>
+            <strong>Gestion des candidatures</strong>
         </nav>
     </header>
 
     <main>
         <section>
             <article>
-                <h2>Rechercher une entreprise</h2>
-                <input type="text" placeholder="Nom, Description ou Email" id="search" onkeyup="searchCompany()" required>
-                
-                <?php if ($canCreateCompany || $canEditCompany): ?>
-                <h2>Ajouter/Modifier une entreprise</h2>
-                <form method="POST" id="companyForm" <?php echo (!$canCreateCompany && !$canEditCompany) ? 'class="disabled-form"' : ''; ?>>
-                    <input type="hidden" id="editId" name="id">
-                    
-                    <label for="nom">Nom
-                        <input type="text" name="nom" id="nom" required>
-                    </label>
-                    
-                    <label for="description">Description
-                        <input type="text" name="description" id="description" required>
-                    </label>
-                    
-                    <label for="url">URL
-                        <input type="url" name="url" id="url">
-                    </label>
-                    
-                    <label for="email">Email
-                        <input type="email" name="email" id="email" required>
-                    </label>
-                    
-                    <label for="telephone">Téléphone
-                        <input type="text" name="telephone" id="telephone" required>
-                    </label>
-                    
-                    <button type="submit" name="ajouter" <?php echo (!$canCreateCompany && !$canEditCompany) ? 'disabled' : ''; ?>>Enregistrer</button>
-                </form>
-                <?php endif; ?>
-                
-                <h2>Liste des entreprises</h2>
+                <h2>Liste des Candidatures</h2>
                 <table>
                     <thead>
                         <tr>
-                            <th>Nom</th>
-                            <th>Description</th>
-                            <th>Email</th>
-                            <th>Téléphone</th>
+                            <th>Étudiant</th>
+                            <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
+                                <th>Entreprise</th>
+                            <?php endif; ?>
+                            <th>Offre</th>
+                            <th>Lieu</th>
+                            <th>Date candidature</th>
+                            <th>Statut</th>
                             <th>Actions</th>
-                            <th>Évaluation</th>
                         </tr>
                     </thead>
-                    <tbody id="companyTable">
-                        <?php foreach ($entreprises as $entreprise): ?>
-                        <tr>
-                            <td><a href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
-                            <td><?= htmlspecialchars($entreprise['description']) ?></td>
-                            <td><?= htmlspecialchars($entreprise['email']) ?></td>
-                            <td><?= htmlspecialchars($entreprise['telephone']) ?></td>
-                            <td>
-                                <?php if ($canEditCompany): ?>
-                                <button class="edit-btn" onclick="editCompany(
-                                    '<?= $entreprise['id'] ?>',
-                                    '<?= addslashes($entreprise['nom']) ?>',
-                                    '<?= addslashes($entreprise['description']) ?>',
-                                    '<?= addslashes($entreprise['url']) ?>',
-                                    '<?= addslashes($entreprise['email']) ?>',
-                                    '<?= addslashes($entreprise['telephone']) ?>'
-                                )">Modifier</button>
-                                <?php endif; ?>
-                                <?php if ($canDeleteCompany): ?>
-                                <a href="?delete=<?= $entreprise['id'] ?>" onclick="return confirm('Supprimer cette entreprise?')" class="delete-btn">Supprimer</a>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($canRateCompany): ?>
-                                <div class="rating">
-                                    <?php for ($i = 5; $i >= 1; $i--): ?>
-                                    <input type="radio" id="star<?= $i ?>_<?= $entreprise['id'] ?>" name="rating_<?= $entreprise['id'] ?>" value="<?= $i ?>" <?= ($i == 3) ? 'checked' : '' ?>>
-                                    <label for="star<?= $i ?>_<?= $entreprise['id'] ?>" title="<?= $i ?> étoiles">★</label>
-                                    <?php endfor; ?>
-                                </div>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                    <tbody>
+                        <?php if (empty($candidatures)): ?>
+                            <tr><td colspan="7">Aucune candidature trouvée</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($candidatures as $candidature): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($candidature['etudiant_prenom'] . ' ' . $candidature['etudiant_nom']) ?></td>
+                                    <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
+                                        <td><?= htmlspecialchars($candidature['entreprise_nom']) ?></td>
+                                    <?php endif; ?>
+                                    <td><?= htmlspecialchars($candidature['offre_titre']) ?></td>
+                                    <td><?= htmlspecialchars($candidature['offre_lieu']) ?></td>
+                                    <td><?= date('d/m/Y', strtotime($candidature['date_candidature'])) ?></td>
+                                    <td>
+                                        <?php 
+                                        $class = 'statut-en-attente';
+                                        if ($candidature['statut'] === 'Acceptée') $class = 'statut-accepte';
+                                        elseif ($candidature['statut'] === 'Refusée') $class = 'statut-refuse';
+                                        ?>
+                                        <span class="<?= $class ?>"><?= htmlspecialchars($candidature['statut']) ?></span>
+                                    </td>
+                                    <td>
+                                        <a href="candidature_details.php?id=<?= $candidature['id'] ?>" class="edit-btn">Voir</a>
+                                        <?php if (in_array($userRole, ['admin', 'pilote', 'entreprise'])): ?>
+                                            <a href="?changer_statut=<?= $candidature['id'] ?>" class="edit-btn">Modifier</a>
+                                        <?php endif; ?>
+                                        <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
+                                            <a href="?supprimer=<?= $candidature['id'] ?>" class="delete-btn">Supprimer</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </article>
         </section>
-    </main>
 
-    <footer></footer>
+        <section>
+            <article>
+                <h2>Offres de stage disponibles</h2>
+                <div class="offers">
+                    <?php if (empty($offres)): ?>
+                        <p>Aucune offre de stage disponible actuellement.</p>
+                    <?php else: ?>
+                        <?php foreach ($offres as $offre): ?>
+                            <div class="offer">
+                                <h3><?= htmlspecialchars($offre['titre']) ?></h3>
+                                <p class="small">
+                                    <?= htmlspecialchars($offre['entreprise_nom']) ?> | 
+                                    <?= htmlspecialchars($offre['lieu']) ?> | 
+                                    Publiée le <?= date('d/m/Y', strtotime($offre['date_publication'])) ?>
+                                </p>
+                                <p><?= htmlspecialchars(substr($offre['description'], 0, 100)) ?>...</p>
+                                <p><strong>Date limite:</strong> <?= date('d/m/Y', strtotime($offre['date_fin'])) ?></p>
+                                <?php if ($userRole === 'etudiant'): ?>
+                                    <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
+        </section>
+    </main>
 
     <script>
         function toggleMenu() {
