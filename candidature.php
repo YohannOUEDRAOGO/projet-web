@@ -104,6 +104,94 @@ if ($userRole === 'entreprise') {
     <title>Gestion des Candidatures</title>
     <link href="style/style_entreprises.css" rel="stylesheet">
     <style>
+                main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+        
+        section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .offers {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 2rem;
+        }
+        
+        .offer {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.3s;
+            border: 1px solid #ddd;
+        }
+        
+        .offer:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .postuler {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .postuler:hover {
+            background-color: #2980b9;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #34495e;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .statut-en-attente {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .statut-accepte {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        
+        .statut-refuse {
+            color: #e74c3c;
+            font-weight: bold;
+        }
         .rating { unicode-bidi: bidi-override; direction: rtl; }
         .rating > input { display: none; }
         .rating > label { display: inline-block; cursor: pointer; }
