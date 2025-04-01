@@ -3,6 +3,22 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php';
 
+// Vérification de session et récupération de l'utilisateur
+require_once 'check_session.php';
+verifySession();
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
+$currentUser = $_SESSION['user'];
+$role = $currentUser['role'];
+
+// Vérification des droits selon la matrice CDC V4
+$canCreateStudent = in_array($role, ['admin', 'pilote']);
+$canEditStudent = in_array($role, ['admin', 'pilote']);
+$canDeleteStudent = in_array($role, ['admin', 'pilote']);
+
 $servername = "localhost";
 $username = "root";
 $password = ""; 
@@ -133,25 +149,34 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
             </center>
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
+                    <div class="user-avatar">
+                        <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
+                    </div>
+                    <span class="user-name">
+                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                        <small>(<?php echo htmlspecialchars($role); ?>)</small>
+                    </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <a href="profil.php" class="dropdown-item">Mon profil</a>
+                    <?php if ($role === 'etudiant'): ?>
+                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                    <?php endif; ?>
                     <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
                 </div>
             </div>
         </nav>
         <nav>
-            <a href="">Accueil</a> |
+            <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
             <a href="stage.php">Gestion des offres de stage</a> |
-            <a href="pilote.php">Gestion des pilotes</a> |
+            <?php if ($role === 'admin'): ?>
+                <a href="pilote.php">Gestion des pilotes</a> |
+            <?php endif; ?>
             <strong>Gestion des étudiants</strong>|
-            <a href="">Gestion des candidatures</a>
+            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
@@ -161,8 +186,9 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
                 <h2>Rechercher un étudiant</h2>
                 <input type="text" placeholder="Nom, Prénom ou Email" id="search" onkeyup="searchStudent()" required>
                 
+                <?php if ($canCreateStudent || $canEditStudent): ?>
                 <h2>Ajouter/Modifier un étudiant</h2>
-                <form method="POST" id="studentForm">
+                <form method="POST" id="studentForm" <?php echo (!$canCreateStudent && !$canEditStudent) ? 'class="disabled-form"' : ''; ?>>
                     <input type="hidden" id="editId" name="id">
                     
                     <label for="nom">Nom
@@ -177,8 +203,9 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
                         <input type="email" name="email" id="email" required>
                     </label>
                     
-                    <button type="submit" name="ajouter">Enregistrer</button>
+                    <button type="submit" name="ajouter" <?php echo (!$canCreateStudent && !$canEditStudent) ? 'disabled' : ''; ?>>Enregistrer</button>
                 </form>
+                <?php endif; ?>
                 
                 <h2>Liste des étudiants</h2>
                 <table>
@@ -197,13 +224,17 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
                             <td><?= htmlspecialchars($etudiant['prenom']) ?></td>
                             <td><?= htmlspecialchars($etudiant['email']) ?></td>
                             <td>
+                                <?php if ($canEditStudent): ?>
                                 <button class="edit-btn" onclick="editStudent(
                                     '<?= $etudiant['id'] ?>',
                                     '<?= addslashes($etudiant['nom']) ?>',
                                     '<?= addslashes($etudiant['prenom']) ?>',
                                     '<?= addslashes($etudiant['email']) ?>'
                                 )">Modifier</button>
+                                <?php endif; ?>
+                                <?php if ($canDeleteStudent): ?>
                                 <a href="?delete=<?= $etudiant['id'] ?>" onclick="return confirm('Supprimer cet étudiant?')" class="delete-btn">Supprimer</a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>

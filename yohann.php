@@ -1,7 +1,7 @@
 <?php
 // Configuration de la base de données
 $host = 'localhost';
-$dbname = 'projet-web';
+$dbname = 'gestion';
 $username = 'root';
 $password = '';
 
@@ -14,8 +14,8 @@ try {
     ]);
 
     // Données de l'utilisateur admin à ajouter
-    $userEmail = 'stephane.kengnetueno@viacesi.com';
-    $userPassword = 'stephane12345678';
+    $userEmail = 'yohann@gmail.com';
+    $userPassword = 'yohann123'; // Mot de passe temporaire
     $userNom = 'KENGNE';
     $userPrenom = 'Stephane';
     
@@ -40,7 +40,7 @@ try {
         $hashedPassword,
         $userNom,
         $userPrenom,
-        'etudiant',  // Rôle admin
+        'admin',  // Rôle admin
         true      // Compte actif
     ]);
     

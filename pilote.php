@@ -3,6 +3,22 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php';
 
+// Vérification de session et récupération de l'utilisateur
+require_once 'check_session.php';
+verifySession();
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
+$currentUser = $_SESSION['user'];
+$role = $currentUser['role'];
+
+// Vérification des droits - Seul l'admin peut gérer les pilotes
+$canCreatePilote = ($role === 'admin');
+$canEditPilote = ($role === 'admin');
+$canDeletePilote = ($role === 'admin');
+
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -133,25 +149,36 @@ $pilotes = $pdo->query("SELECT * FROM utilisateurs WHERE role='pilote'")->fetchA
             </center>
             <div class="user-menu" id="userMenu">
                 <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
+                    <div class="user-avatar">
+                        <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
+                    </div>
+                    <span class="user-name">
+                        <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                        <small>(<?php echo htmlspecialchars($role); ?>)</small>
+                    </span>
                     <span class="dropdown-icon">▼</span>
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
+                    <a href="profil.php" class="dropdown-item">Mon profil</a>
+                    <?php if ($role === 'etudiant'): ?>
+                        <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                    <?php endif; ?>
                     <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+                    <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
                 </div>
             </div>
         </nav>
         <nav>
-            <a href="">Accueil</a> |
+            <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.html">Gestion des offres de stage</a> |
-            <strong>Gestion des pilotes |</strong>
-            <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="">Gestion des candidatures</a>
+            <a href="stage.php">Gestion des offres de stage</a> |
+            <?php if ($role === 'admin'): ?>
+                <strong>Gestion des pilotes</strong>|
+            <?php endif; ?>
+            <?php if (in_array($role, ['admin', 'pilote'])): ?>
+                <a href="etudiant.php">Gestion des étudiants</a> |
+            <?php endif; ?>
+            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
@@ -160,25 +187,27 @@ $pilotes = $pdo->query("SELECT * FROM utilisateurs WHERE role='pilote'")->fetchA
             <article>
                 <h2>Rechercher un pilote</h2>
                 <input type="text" placeholder="Email, nom ou Prénom" id="search" onkeyup="searchPilote()" required>
-               
+                
+                <?php if ($canCreatePilote || $canEditPilote): ?>
                 <h2>Ajouter/Modifier un pilote</h2>
-                <form method="POST" id="piloteForm">
+                <form method="POST" id="piloteForm" <?php echo (!$canCreatePilote && !$canEditPilote) ? 'class="disabled-form"' : ''; ?>>
                     <input type="hidden" id="editId" name="id">
-                   
+                    
                     <label for="nom">Nom
                         <input type="text" name="nom" id="nom" required>
                     </label>
-                   
+                    
                     <label for="prenom">Prénom
                         <input type="text" name="prenom" id="prenom" required>
                     </label>
                     <label for="email">Email
                         <input type="email" name="email" id="email" required>
                     </label>
-                   
-                    <button type="submit" name="ajouter">Enregistrer</button>
+                    
+                    <button type="submit" name="ajouter" <?php echo (!$canCreatePilote && !$canEditPilote) ? 'disabled' : ''; ?>>Enregistrer</button>
                 </form>
-               
+                <?php endif; ?>
+                
                 <h2>Liste des pilotes</h2>
                 <table>
                     <thead>
@@ -196,13 +225,17 @@ $pilotes = $pdo->query("SELECT * FROM utilisateurs WHERE role='pilote'")->fetchA
                             <td><?= htmlspecialchars($pilote['prenom']) ?></td>
                             <td><?= htmlspecialchars($pilote['email']) ?></td>
                             <td>
+                                <?php if ($canEditPilote): ?>
                                 <button class="edit-btn" onclick="editPilote(
                                     '<?= $pilote['id'] ?>',
                                     '<?= addslashes($pilote['nom']) ?>',
                                     '<?= addslashes($pilote['prenom']) ?>',
                                     '<?= addslashes($pilote['email']) ?>'
                                 )">Modifier</button>
+                                <?php endif; ?>
+                                <?php if ($canDeletePilote): ?>
                                 <a href="?delete=<?= $pilote['id'] ?>" onclick="return confirm('Supprimer ce pilote?')" class="delete-btn">Supprimer</a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
