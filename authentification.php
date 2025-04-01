@@ -21,7 +21,7 @@ if (empty($_SESSION['csrf_token'])) {
 
 // Configuration de la base de données
 $host = 'localhost';
-$dbname = 'projet-web';
+$dbname = 'gestion';
 $username = 'root';
 $password = '';
 
