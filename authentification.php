@@ -17,6 +17,8 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+
+
 // Configuration de la base de données
 $host = 'localhost';
 $dbname = 'projet-web';

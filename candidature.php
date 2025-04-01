@@ -13,6 +13,7 @@ $canCreateCompany = in_array($role, ['admin', 'pilote']);
 $canEditCompany = in_array($role, ['admin', 'pilote']);
 $canDeleteCompany = in_array($role, ['admin', 'pilote']);
 $canRateCompany = true; // Tous peuvent évaluer
+
 $servername = "localhost";
 $username = "root";
 $password = "";
@@ -29,15 +30,22 @@ try {
 $currentUser = $_SESSION['user'];
 $userRole = $currentUser['role'];
 
+$wishlistIds = [];
+if ($userRole === 'etudiant') {
+    $stmt = $pdo->prepare("SELECT offre_id FROM wishlist WHERE user_id = ?");
+    $stmt->execute([$currentUser['id']]);
+    $wishlistIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
 // Récupération des données selon le rôle
 if (in_array($userRole, ['admin', 'pilote'])) {
     // Admin et pilotes voient toutes les candidatures
     $candidatures = $pdo->query("
-        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+        SELECT c.*, u.nom AS etudiant_nom, u.prenom AS etudiant_prenom,
                o.titre AS offre_titre, o.lieu AS offre_lieu,
                ent.nom AS entreprise_nom
         FROM candidatures c
-        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN utilisateurs u ON c.etudiant_id = u.id AND u.role = 'etudiant'
         LEFT JOIN offres_stage o ON c.offre_id = o.id
         LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
         ORDER BY c.date_candidature DESC
@@ -45,11 +53,11 @@ if (in_array($userRole, ['admin', 'pilote'])) {
 } elseif ($userRole === 'etudiant') {
     // Étudiants ne voient que leurs propres candidatures
     $candidatures = $pdo->prepare("
-        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+        SELECT c.*, u.nom AS etudiant_nom, u.prenom AS etudiant_prenom,
                o.titre AS offre_titre, o.lieu AS offre_lieu,
                ent.nom AS entreprise_nom
         FROM candidatures c
-        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN utilisateurs u ON c.etudiant_id = u.id AND u.role = 'etudiant'
         LEFT JOIN offres_stage o ON c.offre_id = o.id
         LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
         WHERE c.etudiant_id = ?
@@ -60,11 +68,11 @@ if (in_array($userRole, ['admin', 'pilote'])) {
 } else {
     // Entreprises voient les candidatures pour leurs offres
     $candidatures = $pdo->prepare("
-        SELECT c.*, e.nom AS etudiant_nom, e.prenom AS etudiant_prenom,
+        SELECT c.*, u.nom AS etudiant_nom, u.prenom AS etudiant_prenom,
                o.titre AS offre_titre, o.lieu AS offre_lieu,
                ent.nom AS entreprise_nom
         FROM candidatures c
-        LEFT JOIN etudiants e ON c.etudiant_id = e.id
+        LEFT JOIN utilisateurs u ON c.etudiant_id = u.id AND u.role = 'etudiant'
         LEFT JOIN offres_stage o ON c.offre_id = o.id
         LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
         WHERE o.entreprise_id = ?
@@ -200,6 +208,54 @@ if ($userRole === 'entreprise') {
         .rating > input:checked ~ label { color: gold; }
         .disabled-form { opacity: 0.6; pointer-events: none; }
         .restricted { opacity: 0.6; pointer-events: none; }
+
+        .offer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        ..offer-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+
+        .wishlist-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wishlist-btn:hover {
+            background: #e9ecef;
+        }
+
+        .wishlist-btn.saved {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
+        .wishlist-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .wishlist-btn.saved {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
     </style>
 </head>
 <body>
@@ -318,8 +374,18 @@ if ($userRole === 'entreprise') {
                                 </p>
                                 <p><?= htmlspecialchars(substr($offre['description'], 0, 100)) ?>...</p>
                                 <p><strong>Date limite:</strong> <?= date('d/m/Y', strtotime($offre['date_fin'])) ?></p>
+                                
                                 <?php if ($userRole === 'etudiant'): ?>
-                                    <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
+                                    <div class="offer-actions">
+                                        <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
+                                        <form method="post" action="wishlist_action.php" style="display: inline;">
+                                            <input type="hidden" name="offer_id" value="<?= $offre['id'] ?>">
+                                            <input type="hidden" name="action" value="<?= in_array($offre['id'], $wishlistIds) ? 'remove' : 'add' ?>">
+                                            <button type="submit" class="wishlist-btn">
+                                                <?= in_array($offre['id'], $wishlistIds) ? 'Supprimer' : 'Enregistrer' ?>
+                                            </button>
+                                        </form>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         <?php endforeach; ?>
@@ -330,6 +396,124 @@ if ($userRole === 'entreprise') {
     </main>
 
     <script>
+
+
+        function toggleWishlist(offerId) {
+            const icon = document.getElementById(`wishlist-icon-${offerId}`);
+            const btn = icon.parentElement;
+            
+            // Toggle l'état actif
+            icon.classList.toggle('active');
+            
+            // Changer le symbole cœur et le style du bouton
+            if (icon.classList.contains('active')) {
+                icon.textContent = '❤️';
+                btn.style.backgroundColor = '#f8d7da';
+                btn.style.borderColor = '#f5c6cb';
+                addToWishlist(offerId);
+            } else {
+                icon.textContent = '♡';
+                btn.style.backgroundColor = '#f8f9fa';
+                btn.style.borderColor = '#ddd';
+                removeFromWishlist(offerId);
+            }
+        }
+
+        function addToWishlist(offerId, btn) {
+            // Mise à jour visuelle immédiate
+            btn.classList.add('saved');
+            btn.textContent = 'Supprimer';
+            
+            // Envoi AJAX
+            fetch('add_to_wishlist.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `offer_id=${offerId}&action=add`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    // Annuler le changement visuel en cas d'erreur
+                    btn.classList.remove('saved');
+                    btn.textContent = 'Enregistrer';
+                    alert('Erreur lors de l\'ajout à la wishlist');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                btn.classList.remove('saved');
+                btn.textContent = 'Enregistrer';
+            });
+        }
+
+        function initWishlist() {
+            fetch('get_wishlist.php')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(offerId => {
+                    const btn = document.querySelector(`.wishlist-btn[data-offer-id="${offerId}"]`);
+                    if (btn) {
+                        btn.classList.add('saved');
+                        btn.textContent = 'Supprimer';
+                    }
+                });
+            })
+            .catch(error => console.error('Erreur:', error));
+        }
+
+        function removeFromWishlist(offerId, btn) {
+            // Mise à jour visuelle immédiate
+            btn.classList.remove('saved');
+            btn.textContent = 'Enregistrer';
+            
+            // Envoi AJAX
+            fetch('add_to_wishlist.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `offer_id=${offerId}&action=remove`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    // Annuler le changement visuel en cas d'erreur
+                    btn.classList.add('saved');
+                    btn.textContent = 'Supprimer';
+                    alert('Erreur lors de la suppression de la wishlist');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                btn.classList.add('saved');
+                btn.textContent = 'Supprimer';
+            });
+        }
+
+        // Au chargement de la page, vérifier les offres déjà dans la wishlist
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser les boutons au chargement
+            initWishlist();
+            
+            // Gérer les clics sur les boutons
+            document.querySelectorAll('.wishlist-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const offerId = this.getAttribute('data-offer-id');
+                    const isSaved = this.classList.contains('saved');
+                    
+                    if (isSaved) {
+                        removeFromWishlist(offerId, this);
+                    } else {
+                        addToWishlist(offerId, this);
+                    }
+                });
+            });
+        });
+
+
+
         function toggleMenu() {
             document.getElementById('dropdownMenu').classList.toggle('show');
         }

@@ -1,5 +1,4 @@
 <?php
-
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 require 'vendor/autoload.php';
@@ -7,8 +6,7 @@ require 'vendor/autoload.php';
 $servername = "localhost";
 $username = "root";
 $password = ""; 
-$dbname = "gestion"; // Nom de la base de données
-
+$dbname = "gestion";
 
 function genererMotDePasseUnique($pdo) {
     $majuscules = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -17,18 +15,15 @@ function genererMotDePasseUnique($pdo) {
     $speciaux = '!@#$%^&*()_+-=[]{}|;:,.<>?';
     
     $tentatives = 0;
-    $maxTentatives = 100; // Sécurité pour éviter les boucles infinies
+    $maxTentatives = 100;
     
     do {
         $motDePasse = '';
-        
-        // Construction du mot de passe selon les critères
         $motDePasse .= $majuscules[rand(0, strlen($majuscules) - 1)];
         $motDePasse .= $minuscules[rand(0, strlen($minuscules) - 1)];
         $motDePasse .= $chiffres[rand(0, strlen($chiffres) - 1)];
         $motDePasse .= $speciaux[rand(0, strlen($speciaux) - 1)];
         
-        // Compléter à 12 caractères
         $tousCaracteres = $majuscules . $minuscules . $chiffres . $speciaux;
         while (strlen($motDePasse) < 12) {
             $motDePasse .= $tousCaracteres[rand(0, strlen($tousCaracteres) - 1)];
@@ -37,8 +32,7 @@ function genererMotDePasseUnique($pdo) {
         $motDePasse = str_shuffle($motDePasse);
         $motDePasseHash = password_hash($motDePasse, PASSWORD_BCRYPT);
         
-        // Vérifier si le hash existe déjà
-        $stmt = $pdo->prepare("SELECT id FROM etudiants WHERE mot_de_passe = ?");
+        $stmt = $pdo->prepare("SELECT id FROM utilisateurs WHERE password = ?");
         $stmt->execute([$motDePasseHash]);
         $existe = $stmt->rowCount() > 0;
         
@@ -50,8 +44,6 @@ function genererMotDePasseUnique($pdo) {
     
     return ['plain' => $motDePasse, 'hash' => $motDePasseHash];
 }
-
-
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -68,27 +60,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         if (!empty($_POST['id'])) { 
             // Mise à jour (sans changer le mot de passe)
-            $stmt = $pdo->prepare("UPDATE etudiants SET nom=?, prenom=?, email=? WHERE id=?");
+            $stmt = $pdo->prepare("UPDATE utilisateurs SET nom=?, prenom=?, email=? WHERE id=? AND role='etudiant'");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
             // Vérifier si l'email existe déjà
-            $check = $pdo->prepare("SELECT id FROM etudiants WHERE email = ?");
+            $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
             $check->execute([$email]);
             
             if ($check->rowCount() > 0) {
-                echo "<script>alert('Cet email est déjà utilisé par un autre étudiant');</script>";
+                echo "<script>alert('Cet email est déjà utilisé');</script>";
             } else {
                 try {
                     // Génération d'un mot de passe unique
                     $passwordData = genererMotDePasseUnique($pdo);
                     
-                    // Ajout dans la base de données
-                    $stmt = $pdo->prepare("INSERT INTO etudiants (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
+                    // Ajout dans la base de données avec le rôle étudiant
+                    $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, password, role) VALUES (?, ?, ?, ?, 'etudiant')");
                     $stmt->execute([$nom, $prenom, $email, $passwordData['hash']]);
                     
-                    // Envoi d'email avec PHPMailer
+                    // Envoi d'email avec PHPMailer (identique à votre code actuel)
                     $mail = new PHPMailer(true);
-                    try {
+                    
                         $mail->isSMTP();
                         $mail->Host = 'smtp.gmail.com';
                         $mail->SMTPAuth = true;
@@ -103,9 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
                         $mail->Body = "Bonjour $prenom $nom,\n\nVotre inscription a bien été enregistrée.\nIdentifiants:\nEmail: $email\nMot de Passe: {$passwordData['plain']}\n\nCordialement,\nL'équipe pédagogique.";
                 
                         $mail->send();
-                    } catch (Exception $e) {
-                        error_log("Erreur d'envoi d'email: " . $e->getMessage());
-                    }
+                    
                 } catch (Exception $e) {
                     die("Erreur: " . $e->getMessage());
                 }
@@ -116,16 +106,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     }
 }
 
-// Suppression
+// Suppression (uniquement pour les étudiants)
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM etudiants WHERE id=?");
+    $stmt = $pdo->prepare("DELETE FROM utilisateurs WHERE id=? AND role='etudiant'");
     $stmt->execute([$_GET['delete']]);
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
 
-// Récupération
-$etudiants = $pdo->query("SELECT * FROM etudiants")->fetchAll(PDO::FETCH_ASSOC);
+// Récupération des étudiants seulement
+$etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>

@@ -14,7 +14,7 @@ try {
     ]);
 
     // Données de l'utilisateur admin à ajouter
-    $userEmail = 'stephkengne17@gmail.com';
+    $userEmail = 'stephane.kengnetueno@viacesi.com';
     $userPassword = 'stephane12345678';
     $userNom = 'KENGNE';
     $userPrenom = 'Stephane';
@@ -40,7 +40,7 @@ try {
         $hashedPassword,
         $userNom,
         $userPrenom,
-        'admin',  // Rôle admin
+        'etudiant',  // Rôle admin
         true      // Compte actif
     ]);
     

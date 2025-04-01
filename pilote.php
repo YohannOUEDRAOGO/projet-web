@@ -32,7 +32,7 @@ function genererMotDePasseUnique($pdo) {
         $motDePasse = str_shuffle($motDePasse);
         $motDePasseHash = password_hash($motDePasse, PASSWORD_BCRYPT);
         
-        $stmt = $pdo->prepare("SELECT id FROM pilotes WHERE mot_de_passe = ?");
+        $stmt = $pdo->prepare("SELECT id FROM utilisateurs WHERE password = ?");
         $stmt->execute([$motDePasseHash]);
         $existe = $stmt->rowCount() > 0;
         
@@ -58,29 +58,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
 
     if (!empty($nom) && !empty($prenom) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        if (!empty($_POST['id'])) {
+        if (!empty($_POST['id'])) { 
             // Mise à jour (sans changer le mot de passe)
-            $stmt = $pdo->prepare("UPDATE pilotes SET nom=?, prenom=?, email=? WHERE id=?");
+            $stmt = $pdo->prepare("UPDATE utilisateurs SET nom=?, prenom=?, email=? WHERE id=? AND role='pilote'");
             $stmt->execute([$nom, $prenom, $email, $_POST['id']]);
         } else {
             // Vérifier si l'email existe déjà
-            $check = $pdo->prepare("SELECT id FROM pilotes WHERE email = ?");
+            $check = $pdo->prepare("SELECT id FROM utilisateurs WHERE email = ?");
             $check->execute([$email]);
             
             if ($check->rowCount() > 0) {
-                echo "<script>alert('Cet email est déjà utilisé par un autre pilote');</script>";
+                echo "<script>alert('Cet email est déjà utilisé');</script>";
             } else {
                 try {
                     // Génération d'un mot de passe unique
                     $passwordData = genererMotDePasseUnique($pdo);
                     
-                    // Ajout dans la base de données
-                    $stmt = $pdo->prepare("INSERT INTO pilotes (nom, prenom, email, mot_de_passe) VALUES (?, ?, ?, ?)");
+                    // Ajout dans la base de données avec le rôle pilote
+                    $stmt = $pdo->prepare("INSERT INTO utilisateurs (nom, prenom, email, password, role) VALUES (?, ?, ?, ?, 'pilote')");
                     $stmt->execute([$nom, $prenom, $email, $passwordData['hash']]);
                     
-                    // Envoi d'email avec PHPMailer
+                    // Envoi d'email avec PHPMailer (identique à votre code actuel)
                     $mail = new PHPMailer(true);
-                    try {
+                    
                         $mail->isSMTP();
                         $mail->Host = 'smtp.gmail.com';
                         $mail->SMTPAuth = true;
@@ -95,9 +95,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
                         $mail->Body = "Bonjour $prenom $nom,\n\nVotre compte pilote a bien été créé.\nIdentifiants:\nEmail: $email\nMot de Passe: {$passwordData['plain']}\n\nCordialement,\nL'équipe pédagogique.";
                 
                         $mail->send();
-                    } catch (Exception $e) {
-                        error_log("Erreur d'envoi d'email: " . $e->getMessage());
-                    }
+                    
                 } catch (Exception $e) {
                     die("Erreur: " . $e->getMessage());
                 }
@@ -108,16 +106,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     }
 }
 
-// Suppression
+// Suppression (uniquement pour les pilotes)
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM pilotes WHERE id=?");
+    $stmt = $pdo->prepare("DELETE FROM utilisateurs WHERE id=? AND role='pilote'");
     $stmt->execute([$_GET['delete']]);
     header("Location: ".$_SERVER['PHP_SELF']);
     exit;
 }
 
-// Récupération
-$pilotes = $pdo->query("SELECT * FROM pilotes")->fetchAll(PDO::FETCH_ASSOC);
+// Récupération des pilotes seulement
+$pilotes = $pdo->query("SELECT * FROM utilisateurs WHERE role='pilote'")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
