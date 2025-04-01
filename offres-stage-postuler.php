@@ -1,4 +1,14 @@
 <?php
+// Vérification de session et récupération de l'utilisateur
+require_once 'check_session.php';
+verifySession();
+if (!isset($_SESSION['user'])) {
+    header('Location: authentification.php');
+    exit();
+}
+
+$currentUser = $_SESSION['user'];
+$role = $currentUser['role'];
 $successMessage = "";
 $errorMessage = "";
 
@@ -258,34 +268,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
     </style>
 </head>
 <body>
-    <header>
-        <nav class="navbar">
-            <center>
-                <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
-            </center>
-            <div class="user-menu" id="userMenu">
-                <div class="user-info" onclick="toggleMenu()">
-                    <div class="user-avatar">YR</div>
-                    <span class="user-name">Yohann Romarick</span>
-                    <span class="dropdown-icon">▼</span>
+<header>
+    <nav class="navbar">
+        <center>
+            <img src="image/logo-lbp-header.png" alt="Trouve ton stage en un click avec Lebonplan">
+        </center>
+        <div class="user-menu" id="userMenu">
+            <div class="user-info" onclick="toggleMenu()">
+                <div class="user-avatar">
+                    <?php echo substr($currentUser['prenom'], 0, 1) . substr($currentUser['nom'], 0, 1); ?>
                 </div>
-                <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" class="dropdown-item">Mon profil</a>
-                    <a href="#" class="dropdown-item">Wish-list</a>
-                    <div class="divider"></div>
-                    <a href="#" class="dropdown-item" id="logoutBtn">Déconnexion</a>
-                </div>
+                <span class="user-name">
+                    <?php echo htmlspecialchars($currentUser['prenom'] . ' ' . $currentUser['nom']); ?>
+                    <small>(<?php echo htmlspecialchars($role); ?>)</small>
+                </span>
+                <span class="dropdown-icon">▼</span>
             </div>
-        </nav>
-        <nav>
-            <a href="">Accueil</a> |
-            <a href="entreprise.php">Gestion des entreprises</a> |
-            <a href="stage.php">Gestion des offres de stage</a> |
+            <div class="dropdown-menu" id="dropdownMenu">
+                <a href="profil.php" class="dropdown-item">Mon profil</a>
+                <?php if ($role === 'etudiant'): ?>
+                    <a href="wishlist.php" class="dropdown-item">Wish-list</a>
+                <?php endif; ?>
+                <div class="divider"></div>
+                <a href="authentification.php" class="dropdown-item" id="logoutBtn">Déconnexion</a>
+            </div>
+        </div>
+    </nav>
+    <nav>
+        <a href="candidature.php">Accueil</a> |
+        <a href="entreprise.php">Gestion des entreprises</a> |
+        <a href="stage.php">Gestion des offres de stage</a> |
+        <?php if ($role === 'admin'): ?>
             <a href="pilote.php">Gestion des pilotes</a> |
+        <?php endif; ?>
+        <?php if (in_array($role, ['admin', 'pilote'])): ?>
             <a href="etudiant.php">Gestion des étudiants</a> |
-            <a href="candidature.php">Gestion des candidatures</a>
-        </nav>
-    </header>
+        <?php endif; ?>
+        <a href="candidature.php">Gestion des candidatures</a>
+    </nav>
+</header>
 
     <main>
         <section>
