@@ -67,17 +67,17 @@ if (in_array($userRole, ['admin', 'pilote'])) {
     $candidatures = $candidatures->fetchAll(PDO::FETCH_ASSOC);
 } else {
     // Entreprises voient les candidatures pour leurs offres
-    $candidatures = $pdo->prepare("
+    $candidatures = $pdo->query("
         SELECT c.*, u.nom AS etudiant_nom, u.prenom AS etudiant_prenom,
-               o.titre AS offre_titre, o.lieu AS offre_lieu,
-               ent.nom AS entreprise_nom
+            o.titre AS offre_titre, o.lieu AS offre_lieu,
+            ent.nom AS entreprise_nom
         FROM candidatures c
         LEFT JOIN utilisateurs u ON c.etudiant_id = u.id AND u.role = 'etudiant'
         LEFT JOIN offres_stage o ON c.offre_id = o.id
         LEFT JOIN entreprises ent ON o.entreprise_id = ent.id
-        WHERE o.entreprise_id = ?
         ORDER BY c.date_candidature DESC
-    ");
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
     $candidatures->execute([$currentUser['id']]);
     $candidatures = $candidatures->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -93,7 +93,9 @@ if ($userRole === 'entreprise') {
     ");
     $offres->execute([$currentUser['id']]);
     $offres = $offres->fetchAll(PDO::FETCH_ASSOC);
-} else {
+
+}
+else {
     $offres = $pdo->query("
         SELECT o.*, e.nom AS entreprise_nom 
         FROM offres_stage o

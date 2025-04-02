@@ -85,49 +85,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submitBtn'])) {
             $errorMessage = "Erreur : Le fichier est trop volumineux (2Mo max).";
         } else {
             if (move_uploaded_file($_FILES['cv']['tmp_name'], $uploadFile)) {
-                // Créer un fichier texte avec les informations du candidat
-                $infoContent = "Candidature pour: $offerTitle\n";
-                $infoContent .= "Entreprise: $company\n\n";
-                $infoContent .= "Informations candidat:\n";
-                $infoContent .= "Civilite: " . ($title === 'ms' ? 'Madame' : 'Monsieur') . "\n";
-                $infoContent .= "Nom: $lastname\n";
-                $infoContent .= "Prénom: $surname\n";
-                $infoContent .= "Email: $email\n";
-                $infoContent .= "Majeur: " . ($majeur === 'yes' ? 'Oui' : 'Non') . "\n";
-                $infoContent .= "Informations complémentaires: $categories\n";
-                $infoContent .= "Message pour le recruteur:\n$feedbacks\n";
-                $infoContent .= "Date de candidature: " . date('d/m/Y H:i:s') . "\n";
-                $infoContent .= "CV: $uniqueFilename";
-                
-                file_put_contents($uploadDir . 'info_candidature.txt', $infoContent);
-
-                $successMessage = "Votre candidature a bien été envoyée !";
-                
-                // Enregistrement dans le fichier JSON
-                $newCandidature = [
-                    "entreprise" => $company,
-                    "offre" => $offerTitle,
-                    "date" => date("d/m/Y"),
-                    "statut" => "En attente",
-                    "dossier" => $userFolder
-                ];
-
-                $file = 'candidatures.json';
-                $candidatures = [];
-
-                if (file_exists($file)) {
-                    $jsonData = file_get_contents($file);
-                    $candidatures = json_decode($jsonData, true);
+                // Enregistrement dans la base de données
+                try {
+                    $pdo = new PDO("mysql:host=localhost;dbname=gestion;charset=utf8", "root", "");
+                    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                    
+                    $stmt = $pdo->prepare("
+                        INSERT INTO candidatures 
+                        (etudiant_id, offre_id, date_candidature, cv_path, message, statut) 
+                        VALUES (?, ?, NOW(), ?, ?, 'En attente')
+                    ");
+                    
+                    $stmt->execute([
+                        $currentUser['id'], // etudiant_id
+                        $offerId,           // offre_id
+                        $uploadFile,        // ev_path (chemin du CV)
+                        $feedbacks          // message
+                    ]);
+                    
+                    $successMessage = "Votre candidature a bien été envoyée !";
+                    
+                    // Le reste de votre code pour le fichier JSON...
+                } catch (PDOException $e) {
+                    $errorMessage = "Erreur lors de l'enregistrement en base de données: " . $e->getMessage();
                 }
-
-                $candidatures[] = $newCandidature;
-                file_put_contents($file, json_encode($candidatures, JSON_PRETTY_PRINT));
-            } else {
-                $errorMessage = "Erreur lors du téléchargement du CV.";
             }
         }
     } else {
         $errorMessage = "Veuillez ajouter votre CV.";
+    }
+
+    if ($successMessage) {
+        header('Location: candidature.php');
+        exit();
     }
 }
 ?>

@@ -1,5 +1,5 @@
-Candidature pour: INGENIEUR CYBERSECURITE
-Entreprise: ORANGE
+Candidature pour: DEVELOPPEUR FULL STACK H/F
+Entreprise: SOPRA STERIA
 
 Informations candidat:
 Civilite: Monsieur
@@ -9,6 +9,6 @@ Email: stephane.kengnetueno@viacesi.fr
 Majeur: Oui
 Informations complémentaires: permis
 Message pour le recruteur:
-kl,m;
-Date de candidature: 31/03/2025 15:23:26
-CV: 1743427406_Document 5 (2).pdf
+Bonjour
+Date de candidature: 02/04/2025 10:10:29
+CV: 1743581429_STEPHANE.pdf
