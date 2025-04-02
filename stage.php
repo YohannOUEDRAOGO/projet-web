@@ -182,11 +182,11 @@ $offres = $pdo->query("
                     </label>
                     
                     <label for="description">Description
-                        <textarea name="description" id="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+                        <input type="text" name="description" id="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?>
                     </label>
                     
                     <label for="competences">Compétences requises
-                        <textarea name="competences" id="competences"><?= htmlspecialchars($_POST['competences'] ?? '') ?></textarea>
+                        <input type="text" name="competences" id="competences"><?= htmlspecialchars($_POST['competences'] ?? '') ?>
                     </label>
                     
                     <label for="nom_entreprise">Nom de l'entreprise
