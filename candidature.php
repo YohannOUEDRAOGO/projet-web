@@ -288,8 +288,8 @@ else {
             </div>
         </nav>
         <nav>
-            <a href="candidature.php">Accueil</a> |
-            <?php if (in_array($userRole, ['admin', 'pilote', 'entreprise'])): ?>
+            <strong>Accueil|</strong>
+            <?php if (in_array($userRole, ['admin', 'pilote', 'etudiant'])): ?>
                 <a href="entreprise.php">Gestion des entreprises</a> |
             <?php endif; ?>
             <a href="stage.php">Gestion des offres de stage</a> |
@@ -299,7 +299,6 @@ else {
             <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
-            <strong>Gestion des candidatures</strong>
         </nav>
     </header>
 

@@ -118,7 +118,6 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
             <?php if (in_array($role, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
-            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
@@ -172,7 +171,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                     <tbody id="companyTable">
                         <?php foreach ($entreprises as $entreprise): ?>
                         <tr>
-                            <td><a href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
+                            <td><a class= "entreprise" href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
                             <td><?= htmlspecialchars($entreprise['description']) ?></td>
                             <td><?= htmlspecialchars($entreprise['email']) ?></td>
                             <td><?= htmlspecialchars($entreprise['telephone']) ?></td>

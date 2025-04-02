@@ -163,7 +163,6 @@ $offres = $pdo->query("
             <?php if (in_array($role, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
-            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 

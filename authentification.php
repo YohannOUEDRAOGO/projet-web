@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([$user['id']]);
 
                 // Redirection sécurisée
-                header('Location: entreprise.php');
+                header('Location: candidature.php');
                 exit();
             }
         }

@@ -40,7 +40,7 @@ try {
         $hashedPassword,
         $userNom,
         $userPrenom,
-        'admin',  // Rôle admin
+        'etudiant',  // Rôle admin
         true      // Compte actif
     ]);
     

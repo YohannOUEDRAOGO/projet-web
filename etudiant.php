@@ -176,7 +176,6 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
                 <a href="pilote.php">Gestion des pilotes</a> |
             <?php endif; ?>
             <strong>Gestion des étudiants</strong>|
-            <a href="candidature.php">Gestion des candidatures</a>
         </nav>
     </header>
 
