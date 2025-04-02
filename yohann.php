@@ -14,7 +14,7 @@ try {
     ]);
 
     // Données de l'utilisateur admin à ajouter
-    $userEmail = 'yohann@gmail.comg';
+    $userEmail = 'yo@gmail.comg';
     $userPassword = '12345678'; // Mot de passe temporaire
     $userNom = 'KENGNE';
     $userPrenom = 'Stephane';

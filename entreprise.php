@@ -19,6 +19,16 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "gestion";
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Dans le traitement de l'évaluation
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rate_company'])) {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Token CSRF invalide");
+    }
+}
 
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
@@ -51,6 +61,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
         exit;
     }
 }
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['rate_company'])) {
+    $entreprise_id = (int)$_POST['entreprise_id'];
+    $note = (int)$_POST['rating'];
+    $user_id = $currentUser['id'];
+    
+    // Vérifier si l'utilisateur a déjà évalué cette entreprise
+    $stmt = $pdo->prepare("SELECT id FROM evaluations WHERE entreprise_id=? AND user_id=?");
+    $stmt->execute([$entreprise_id, $user_id]);
+    
+    if ($stmt->rowCount() == 0) {
+        $insert = $pdo->prepare("INSERT INTO evaluations (entreprise_id, user_id, note) VALUES (?, ?, ?)");
+        $insert->execute([$entreprise_id, $user_id, $note]);
+    } else {
+        // Option: permettre la mise à jour de l'évaluation existante
+        $update = $pdo->prepare("UPDATE evaluations SET note=? WHERE entreprise_id=? AND user_id=?");
+        $update->execute([$note, $entreprise_id, $user_id]);
+    }
+    
+    header("Location: ".$_SERVER['PHP_SELF']);
+    exit;
+}
 
 if (isset($_GET['delete'])) {
     if (!$canDeleteCompany) {
@@ -62,7 +93,15 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-$entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
+$entreprises = $pdo->query("
+    SELECT e.*, 
+           AVG(ev.note) as moyenne_notes,
+           COUNT(ev.id) as nombre_evaluations,
+           (SELECT note FROM evaluations WHERE entreprise_id = e.id AND user_id = ".$currentUser['id'].") as user_note
+    FROM entreprises e
+    LEFT JOIN evaluations ev ON ev.entreprise_id = e.id
+    GROUP BY e.id
+")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -79,6 +118,31 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
         .rating > label:hover ~ label,
         .rating > input:checked ~ label { color: gold; }
         .disabled-form { opacity: 0.6; pointer-events: none; }
+        .rating-form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .rate-btn {
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .rate-btn:hover {
+        background: #45a049;
+    }
+    
+    .avg-rating {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
     </style>
 </head>
 <body>
@@ -171,7 +235,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                     <tbody id="companyTable">
                         <?php foreach ($entreprises as $entreprise): ?>
                         <tr>
-                            <td><a class= "entreprise" href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
+                            <td><a href="<?= htmlspecialchars($entreprise['url']) ?>" target="_blank"><?= htmlspecialchars($entreprise['nom']) ?></a></td>
                             <td><?= htmlspecialchars($entreprise['description']) ?></td>
                             <td><?= htmlspecialchars($entreprise['email']) ?></td>
                             <td><?= htmlspecialchars($entreprise['telephone']) ?></td>
@@ -191,14 +255,28 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($canRateCompany): ?>
-                                <div class="rating">
-                                    <?php for ($i = 5; $i >= 1; $i--): ?>
-                                    <input type="radio" id="star<?= $i ?>_<?= $entreprise['id'] ?>" name="rating_<?= $entreprise['id'] ?>" value="<?= $i ?>" <?= ($i == 3) ? 'checked' : '' ?>>
-                                    <label for="star<?= $i ?>_<?= $entreprise['id'] ?>" title="<?= $i ?> étoiles">★</label>
-                                    <?php endfor; ?>
-                                </div>
-                                <?php endif; ?>
+                           <?php if ($canRateCompany): ?>
+                            <form method="POST" class="rating-form">
+                             <input type="hidden" name="entreprise_id" value="<?= $entreprise['id'] ?>">
+                            <input type="hidden" name="rate_company" value="1">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <div class="rating">
+                            <?php for ($i = 5; $i >= 1; $i--): ?>
+                          <input type="radio" id="star<?= $i ?>_<?= $entreprise['id'] ?>" 
+                          name="rating" value="<?= $i ?>"
+                           <?= (isset($entreprise['user_note']) && $entreprise['user_note'] == $i ? 'checked' : '' )?>>
+                         <label for="star<?= $i ?>_<?= $entreprise['id'] ?>" title="<?= $i ?> étoiles">★</label>
+                         <?php endfor; ?>
+        </div>
+        <button type="submit" class="rate-btn">Évaluer</button>
+        <?php if (isset($entreprise['moyenne_notes'])): ?>
+        <div class="avg-rating">
+            Moyenne: <?= number_format($entreprise['moyenne_notes'], 1) ?>/5 
+            (<?= $entreprise['nombre_evaluations'] ?> avis)
+        </div>
+        <?php endif; ?>
+    </form>
+    <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -245,6 +323,13 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                 window.location.href = 'authentification.php';
             }
         });
+        document.querySelectorAll('.rating-form').forEach(form => {
+       form.addEventListener('submit', function(e) {
+        if (!confirm('Confirmez-vous cette évaluation ?')) {
+            e.preventDefault();
+        }
+    });
+});
     </script>
 </body>
 </html>
