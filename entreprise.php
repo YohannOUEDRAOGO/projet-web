@@ -100,7 +100,7 @@ $entreprises = $pdo->query("SELECT * FROM entreprises")->fetchAll(PDO::FETCH_ASS
                 </div>
                 <div class="dropdown-menu" id="dropdownMenu">
                     <a href="profil.php" class="dropdown-item">Mon profil</a>
-                    <?php if ($role === 'etudiant'): ?>
+                    <?php if ($role === 'etudiant' or $role==='admin'): ?>
                         <a href="wishlist.php" class="dropdown-item">Wish-list</a>
                     <?php endif; ?>
                     <div class="divider"></div>

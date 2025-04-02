@@ -375,7 +375,7 @@ if ($userRole === 'entreprise') {
                                 <p><?= htmlspecialchars(substr($offre['description'], 0, 100)) ?>...</p>
                                 <p><strong>Date limite:</strong> <?= date('d/m/Y', strtotime($offre['date_fin'])) ?></p>
                                 
-                                <?php if ($userRole === 'etudiant'): ?>
+                                <?php if ($userRole === 'etudiant' or $userRole === 'admin'): ?>
                                     <div class="offer-actions">
                                         <a class="postuler" href="offres-stage-postuler.php?id=<?= $offre['id'] ?>">POSTULER</a>
                                         <form method="post" action="wishlist_action.php" style="display: inline;">
