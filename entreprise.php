@@ -16,8 +16,8 @@ $canDeleteCompany = in_array($role, ['admin', 'pilote']);
 $canRateCompany = true; // Tous peuvent évaluer
 
 $servername = "172.201.65.180";
-$username = "stephane";
-$password = "Stephane1@";
+$username = "yohann";
+$password = "Yohannboss04@";
 $dbname = "gestion";
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
