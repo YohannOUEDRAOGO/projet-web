@@ -20,10 +20,10 @@ if (empty($_SESSION['csrf_token'])) {
 
 
 // Configuration de la base de données
-$host = 'localhost';
+$host = '172.201.65.180';
 $dbname = 'gestion';
-$username = 'root';
-$password = '';
+$username = 'yohann';
+$password = 'Yohannboss04@';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password, [
