@@ -111,7 +111,7 @@ $entreprises = $pdo->query("
     <title>Gestion des Entreprises</title>
     <link href="style/style_entreprises.css" rel="stylesheet">
     <style>
-        .rating { unicode-bidi: bidi-override; direction: rtl; }
+        .rating { unicode-bidi: bidi-override; direction: ltr; }
         .rating > input { display: none; }
         .rating > label { display: inline-block; cursor: pointer; }
         .rating > label:hover,
@@ -143,6 +143,7 @@ $entreprises = $pdo->query("
         font-size: 12px;
         color: #666;
         margin-top: 5px;
+    }
     </style>
 </head>
 <body>
@@ -286,7 +287,9 @@ $entreprises = $pdo->query("
         </section>
     </main>
 
-    <footer></footer>
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
+    </footer>
 
     <script>
         function toggleMenu() {

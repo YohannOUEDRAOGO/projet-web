@@ -28,7 +28,7 @@ try {
 }
 
 // Récupérer la liste des entreprises pour le select
-$entreprises = $pdo->query("SELECT id, nom FROM entreprises")->fetchAll(PDO::FETCH_ASSOC);
+$entreprises = $pdo->query("SELECT id, nom FROM entreprises ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     // Vérification des droits avant traitement
@@ -40,7 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $titre = htmlspecialchars($_POST['titre'] ?? '');
     $description = htmlspecialchars($_POST['description'] ?? '');
     $competences = htmlspecialchars($_POST['competences'] ?? '');
-    $nom_entreprise = htmlspecialchars($_POST['nom_entreprise'] ?? '');
+    $entreprise_id = (int)$_POST['entreprise_id'];
     $lieu = htmlspecialchars($_POST['lieu'] ?? '');
     $base_remuneration = htmlspecialchars($_POST['base_remuneration'] ?? '');
     $date_publication = $_POST['date_publication'] ?? date('Y-m-d');
@@ -50,27 +50,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['ajouter'])) {
     $errors = [];
     if (empty($titre)) $errors[] = "Le titre est obligatoire";
     if (empty($description)) $errors[] = "La description est obligatoire";
-    if (empty($nom_entreprise)) $errors[] = "Le nom de l'entreprise est obligatoire";
+    if (empty($entreprise_id)) $errors[] = "L'entreprise est obligatoire";
     if (empty($lieu)) $errors[] = "Le lieu est obligatoire";
     if (empty($date_publication)) $errors[] = "La date de publication est obligatoire";
     if (empty($date_fin)) $errors[] = "La date de fin est obligatoire";
 
     if (empty($errors)) {
         try {
-            // Vérifier si l'entreprise existe déjà
-            $stmt = $pdo->prepare("SELECT id FROM entreprises WHERE nom = ?");
-            $stmt->execute([$nom_entreprise]);
-            $entreprise = $stmt->fetch();
-
-            if (!$entreprise) {
-                // Créer la nouvelle entreprise si elle n'existe pas
-                $stmt = $pdo->prepare("INSERT INTO entreprises (nom) VALUES (?)");
-                $stmt->execute([$nom_entreprise]);
-                $entreprise_id = $pdo->lastInsertId();
-            } else {
-                $entreprise_id = $entreprise['id'];
-            }
-
             if (!empty($_POST['id'])) {
                 $stmt = $pdo->prepare("UPDATE offres_stage SET titre=?, description=?, competences_requises=?, entreprise_id=?, lieu=?, base_remuneration=?, date_publication=?, date_fin=? WHERE id=?");
                 $stmt->execute([$titre, $description, $competences, $entreprise_id, $lieu, $base_remuneration, $date_publication, $date_fin, $_POST['id']]);
@@ -124,6 +110,13 @@ $offres = $pdo->query("
     <style>
         .disabled-form { opacity: 0.6; pointer-events: none; }
         .hidden { display: none; }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -182,15 +175,23 @@ $offres = $pdo->query("
                     </label>
                     
                     <label for="description">Description
-                        <input type="text" name="description" id="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?>
+                        <input type = "text" name="description" id="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?></input>
                     </label>
                     
                     <label for="competences">Compétences requises
-                        <input type="text" name="competences" id="competences"><?= htmlspecialchars($_POST['competences'] ?? '') ?>
+                        <input type="text" name="competences" id="competences" value="<?= htmlspecialchars($_POST['competences'] ?? '') ?>">
                     </label>
                     
-                    <label for="nom_entreprise">Nom de l'entreprise
-                        <input type="text" name="nom_entreprise" id="nom_entreprise" value="<?= htmlspecialchars($_POST['nom_entreprise'] ?? '') ?>" required>
+                    <label for="entreprise_id">Nom de l'entreprise
+                        <select name="entreprise_id" id="entreprise_id" required>
+                            <option value="">-- Sélectionner une entreprise --</option>
+                            <?php foreach ($entreprises as $entreprise): ?>
+                                <option value="<?= $entreprise['id'] ?>" 
+                                    <?= (isset($_POST['entreprise_id']) && $_POST['entreprise_id'] == $entreprise['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($entreprise['nom']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </label>
                     
                     <label for="lieu">Lieu
@@ -240,7 +241,7 @@ $offres = $pdo->query("
                                     '<?= addslashes($offre['titre']) ?>',
                                     '<?= addslashes($offre['description']) ?>',
                                     '<?= addslashes($offre['competences_requises']) ?>',
-                                    '<?= addslashes($offre['entreprise_nom']) ?>',
+                                    '<?= $offre['entreprise_id'] ?>',
                                     '<?= addslashes($offre['lieu']) ?>',
                                     '<?= addslashes($offre['base_remuneration']) ?>',
                                     '<?= date('Y-m-d', strtotime($offre['date_publication'])) ?>',
@@ -259,9 +260,8 @@ $offres = $pdo->query("
         </section>
     </main>
 
-    <footer class="navbar footer">
-        <hr>
-        <em>2024 - Tous droits réservés - Web4All</em>
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
     </footer>
 
     <script>
@@ -275,12 +275,12 @@ $offres = $pdo->query("
             }
         }
 
-        function editOffre(id, titre, description, competences, entreprise_nom, lieu, base_remuneration, date_publication, date_fin) {
+        function editOffre(id, titre, description, competences, entreprise_id, lieu, base_remuneration, date_publication, date_fin) {
             document.getElementById('editId').value = id;
             document.getElementById('titre').value = titre;
             document.getElementById('description').value = description;
             document.getElementById('competences').value = competences;
-            document.getElementById('nom_entreprise').value = entreprise_nom;
+            document.getElementById('entreprise_id').value = entreprise_id;
             document.getElementById('lieu').value = lieu;
             document.getElementById('base_remuneration').value = base_remuneration;
             document.getElementById('date_publication').value = date_publication;

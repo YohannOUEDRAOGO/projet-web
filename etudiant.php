@@ -243,7 +243,9 @@ $etudiants = $pdo->query("SELECT * FROM utilisateurs WHERE role='etudiant'")->fe
         </section>
     </main>
 
-    <footer></footer>
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
+    </footer>
 
     <script>
         function toggleMenu() {

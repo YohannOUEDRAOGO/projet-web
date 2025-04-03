@@ -138,6 +138,9 @@ $wishlist = $wishlist->fetchAll(PDO::FETCH_ASSOC);
             </article>
         </section>
     </main>
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
+    </footer>
 
     <script>
         function toggleMenu() {

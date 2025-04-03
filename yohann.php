@@ -14,7 +14,7 @@ try {
     ]);
 
     // Données de l'utilisateur admin à ajouter
-    $userEmail = 'yo@gmail.comg';
+    $userEmail = 'stephkengne17@gmail.com';
     $userPassword = '12345678'; // Mot de passe temporaire
     $userNom = 'KENGNE';
     $userPrenom = 'Stephane';
@@ -40,8 +40,8 @@ try {
         $hashedPassword,
         $userNom,
         $userPrenom,
-        'etudiant',  // Rôle admin
-        true      // Compte actif
+        'admin',  
+        true      
     ]);
     
     echo "Utilisateur admin ajouté avec succès!";

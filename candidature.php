@@ -94,8 +94,8 @@ if ($userRole === 'entreprise') {
     $offres->execute([$currentUser['id']]);
     $offres = $offres->fetchAll(PDO::FETCH_ASSOC);
 
-}
-else {
+
+} else {
     $offres = $pdo->query("
         SELECT o.*, e.nom AS entreprise_nom 
         FROM offres_stage o
@@ -288,8 +288,8 @@ else {
             </div>
         </nav>
         <nav>
-            <strong>Accueil|</strong>
-            <?php if (in_array($userRole, ['admin', 'pilote', 'etudiant'])): ?>
+            <a href="candidature.php">Accueil</a> |
+            <?php if (in_array($userRole, ['admin', 'pilote', 'entreprise'])): ?>
                 <a href="entreprise.php">Gestion des entreprises</a> |
             <?php endif; ?>
             <a href="stage.php">Gestion des offres de stage</a> |
@@ -299,6 +299,7 @@ else {
             <?php if (in_array($userRole, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
+            <strong>Gestion des candidatures</strong>
         </nav>
     </header>
 
@@ -396,36 +397,18 @@ else {
         </section>
     </main>
 
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
+    </footer>
+
     <script>
 
 
-        function toggleWishlist(offerId) {
-            const icon = document.getElementById(`wishlist-icon-${offerId}`);
-            const btn = icon.parentElement;
-            
-            // Toggle l'état actif
-            icon.classList.toggle('active');
-            
-            // Changer le symbole cœur et le style du bouton
-            if (icon.classList.contains('active')) {
-                icon.textContent = '❤️';
-                btn.style.backgroundColor = '#f8d7da';
-                btn.style.borderColor = '#f5c6cb';
-                addToWishlist(offerId);
-            } else {
-                icon.textContent = '♡';
-                btn.style.backgroundColor = '#f8f9fa';
-                btn.style.borderColor = '#ddd';
-                removeFromWishlist(offerId);
-            }
-        }
-
         function addToWishlist(offerId, btn) {
-            // Mise à jour visuelle immédiate
             btn.classList.add('saved');
             btn.textContent = 'Supprimer';
             
-            // Envoi AJAX
+           
             fetch('add_to_wishlist.php', {
                 method: 'POST',
                 headers: {
@@ -436,7 +419,6 @@ else {
             .then(response => response.json())
             .then(data => {
                 if (!data.success) {
-                    // Annuler le changement visuel en cas d'erreur
                     btn.classList.remove('saved');
                     btn.textContent = 'Enregistrer';
                     alert('Erreur lors de l\'ajout à la wishlist');
@@ -465,11 +447,10 @@ else {
         }
 
         function removeFromWishlist(offerId, btn) {
-            // Mise à jour visuelle immédiate
             btn.classList.remove('saved');
             btn.textContent = 'Enregistrer';
             
-            // Envoi AJAX
+            
             fetch('add_to_wishlist.php', {
                 method: 'POST',
                 headers: {
@@ -480,7 +461,6 @@ else {
             .then(response => response.json())
             .then(data => {
                 if (!data.success) {
-                    // Annuler le changement visuel en cas d'erreur
                     btn.classList.add('saved');
                     btn.textContent = 'Supprimer';
                     alert('Erreur lors de la suppression de la wishlist');

@@ -164,6 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             <a href="mailto:Yohannodg@gmail.com">Contact administrateur</a>
         </p>
     </div>
+    <footer>
+        <a href="mentions_legales.pdf"><em>2024 - Tous droits réservés - Web4All</em></a>
+    </footer>
 
     <script>
         // Focus automatique sur le premier champ erreur
