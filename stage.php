@@ -139,7 +139,7 @@ $stats = $pdo->query("
             ELSE domaine
         END as domaine_label,
         COUNT(*) as nombre,
-        AVG(LENGTH(competences_requises) - LENGTH(REPLACE(competences_requises, ',', '')) + 1 as moy_competences,
+        AVG(LENGTH(competences_requises) - LENGTH(REPLACE(competences_requises, ',', '')) + 1 )as moy_competences,
         MIN(date_publication) as plus_ancienne,
         MAX(date_publication) as plus_recente
     FROM offres_stage 
