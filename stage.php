@@ -252,7 +252,7 @@ $offresParDuree = compterOffresParDuree($pdo);
             </div>
         </nav>
         <nav>
-            <a href="candidature.php">Accueil</a> |
+            <strong>Accueil |</strong>
             <a href="entreprise.php">Gestion des entreprises</a> |
             <strong>Gestion des offres de stage</strong> |
             <?php if ($role === 'admin'): ?>
@@ -261,7 +261,6 @@ $offresParDuree = compterOffresParDuree($pdo);
             <?php if (in_array($role, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
-            <a href="candidatures.php">Mes candidatures</a>
         </nav>
     </header>
 
