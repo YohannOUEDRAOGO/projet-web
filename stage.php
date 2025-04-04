@@ -32,7 +32,11 @@ try {
 $entreprises = $pdo->query("SELECT id, nom FROM entreprises ORDER BY nom")->fetchAll(PDO::FETCH_ASSOC);
 
 // Récupérer les domaines disponibles
-$domaines = $pdo->query("SELECT DISTINCT domaine FROM offres_stage")->fetchAll(PDO::FETCH_COLUMN);
+$domaines = [
+    'reseau' => 'Réseaux et systèmes',
+    'dev' => 'Développement web/logiciel/mobile/jeux vidéos',
+    'datascience' => 'Data et intelligence artificielle'
+];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Gestion de l'ajout/modification
@@ -128,13 +132,18 @@ if (isset($_GET['delete'])) {
 // Récupération des statistiques
 $stats = $pdo->query("
     SELECT 
-        domaine, 
+        CASE 
+            WHEN domaine = 'reseau' THEN 'Réseaux et systèmes'
+            WHEN domaine = 'dev' THEN 'Développement web/logiciel/mobile/jeux vidéos'
+            WHEN domaine = 'datascience' THEN 'Data et intelligence artificielle'
+            ELSE domaine
+        END as domaine_label,
         COUNT(*) as nombre,
-        AVG(LENGTH(competences_requises) - LENGTH(REPLACE(competences_requises, ',', '')) + 1) as moy_competences,
+        AVG(LENGTH(competences_requises) - LENGTH(REPLACE(competences_requises, ',', '')) + 1 as moy_competences,
         MIN(date_publication) as plus_ancienne,
         MAX(date_publication) as plus_recente
     FROM offres_stage 
-    GROUP BY domaine
+    GROUP BY domaine_label
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Récupération des offres si pas déjà fait
@@ -252,12 +261,12 @@ $offresParDuree = compterOffresParDuree($pdo);
             </div>
         </nav>
         <nav>
-            <strong>Accueil |</strong>
+            <a href="candidature.php">Accueil</a> |
             <a href="entreprise.php">Gestion des entreprises</a> |
             <strong>Gestion des offres de stage</strong> |
             <?php if ($role === 'admin'): ?>
                 <a href="pilote.php">Gestion des pilotes</a> |
-            <?php endif; ?>
+            <?php endif; ?> 
             <?php if (in_array($role, ['admin', 'pilote'])): ?>
                 <a href="etudiant.php">Gestion des étudiants</a> |
             <?php endif; ?>
@@ -322,17 +331,17 @@ $offresParDuree = compterOffresParDuree($pdo);
                         <textarea name="competences" id="competences" required><?= htmlspecialchars($_POST['competences'] ?? '') ?></textarea>
                     </label>
                     
-                    <label for="domaine">Domaine*
-                        <select name="domaine" id="domaine" required>
-                            <option value="">-- Sélectionner un domaine --</option>
-                            <?php foreach ($domaines as $domaine): ?>
-                                <option value="<?= htmlspecialchars($domaine) ?>" 
-                                    <?= (isset($_POST['domaine']) && $_POST['domaine'] == $domaine) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($domaine) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </label>
+                 <label for="domaine">Domaine*
+                    <select name="domaine" id="domaine" required>
+                       <option value="">-- Sélectionner un domaine --</option>
+                      <?php foreach ($domaines as $value => $label): ?>
+                       <option value="<?= htmlspecialchars($value) ?>" 
+                        <?= (isset($_POST['domaine']) && $_POST['domaine'] == $value) ? 'selected' : '' ?>>
+                       <?= htmlspecialchars($label) ?>
+                    </option>
+                     <?php endforeach; ?>
+                     </select>
+                  </label>
                     
                     <label for="entreprise_id">Entreprise*
                         <select name="entreprise_id" id="entreprise_id" required>
